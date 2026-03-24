@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid()) @db.VarChar(36)
+  email        String        @unique @db.VarChar(191)
+  passwordHash String        @db.VarChar(255)
+  name         String        @db.VarChar(255)
+  role         Role          @default(USER)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  progress     Progress[]
+  certificates Certificate[]
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Course {
+  id           String        @id @default(uuid()) @db.VarChar(36)
+  title        String        @db.VarChar(255)
+  description  String        @db.Text
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  videos       Video[]
+  certificates Certificate[]
+}
+
+model Video {
+  id        String     @id @default(uuid()) @db.VarChar(36)
+  courseId  String     @db.VarChar(36)
+  title     String     @db.VarChar(255)
+  url       String     @db.VarChar(512)
+  duration  Int
+  order     Int
+  createdAt DateTime   @default(now())
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress  Progress[]
+
+  @@index([courseId, order])
+}
+
+model Progress {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  userId    String   @db.VarChar(36)
+  videoId   String   @db.VarChar(36)
+  courseId  String   @db.VarChar(36)
+  percent   Float    @default(0)
+  completed Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([userId, courseId])
+}
+
+model Certificate {
+  id       String   @id @default(uuid()) @db.VarChar(36)
+  userId   String   @db.VarChar(36)
+  courseId String   @db.VarChar(36)
+  filePath String   @db.VarChar(512)
+  issuedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
