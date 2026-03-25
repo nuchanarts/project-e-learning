@@ -5,13 +5,9 @@ import { courseRepository } from '../../course/course.repository';
 jest.mock('../progress.repository');
 jest.mock('../../course/course.repository');
 
-const mockVideo = { id: 'v1', courseId: 'c1', duration: 300, order: 1 };
 const mockCourse = {
   id: 'c1',
-  videos: [
-    { id: 'v1' },
-    { id: 'v2' },
-  ],
+  videos: [{ id: 'v1' }, { id: 'v2' }],
 };
 
 beforeEach(() => {
@@ -21,7 +17,12 @@ beforeEach(() => {
 describe('progressService.saveProgress', () => {
   it('should mark video completed when percent >= 80', async () => {
     (progressRepository.upsert as jest.Mock).mockResolvedValue({
-      id: 'p1', userId: 'u1', videoId: 'v1', courseId: 'c1', percent: 85, completed: true,
+      id: 'p1',
+      userId: 'u1',
+      videoId: 'v1',
+      courseId: 'c1',
+      percent: 85,
+      completed: true,
     });
     (progressRepository.countCompletedVideos as jest.Mock).mockResolvedValue(2);
     (courseRepository.findById as jest.Mock).mockResolvedValue(mockCourse);
@@ -32,7 +33,12 @@ describe('progressService.saveProgress', () => {
 
   it('should NOT mark video completed when percent < 80', async () => {
     (progressRepository.upsert as jest.Mock).mockResolvedValue({
-      id: 'p1', userId: 'u1', videoId: 'v1', courseId: 'c1', percent: 50, completed: false,
+      id: 'p1',
+      userId: 'u1',
+      videoId: 'v1',
+      courseId: 'c1',
+      percent: 50,
+      completed: false,
     });
     (progressRepository.countCompletedVideos as jest.Mock).mockResolvedValue(0);
     (courseRepository.findById as jest.Mock).mockResolvedValue(mockCourse);
@@ -44,7 +50,12 @@ describe('progressService.saveProgress', () => {
 
   it('should mark course completed when all videos are completed', async () => {
     (progressRepository.upsert as jest.Mock).mockResolvedValue({
-      id: 'p1', userId: 'u1', videoId: 'v2', courseId: 'c1', percent: 100, completed: true,
+      id: 'p1',
+      userId: 'u1',
+      videoId: 'v2',
+      courseId: 'c1',
+      percent: 100,
+      completed: true,
     });
     (progressRepository.countCompletedVideos as jest.Mock).mockResolvedValue(2);
     (courseRepository.findById as jest.Mock).mockResolvedValue(mockCourse);
