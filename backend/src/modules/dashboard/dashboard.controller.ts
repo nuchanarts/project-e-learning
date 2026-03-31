@@ -7,6 +7,17 @@ export const dashboardController = {
     try {
       const result = await dashboardService.getForUser(req.user!.id);
       res.json(result);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getAnalytics(_req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await dashboardService.getAnalytics();
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
   },
 };

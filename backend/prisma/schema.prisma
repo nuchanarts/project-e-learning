@@ -36,18 +36,23 @@ model User {
 }
 
 model Course {
-  id            String          @id @default(uuid()) @db.VarChar(36)
-  title         String          @db.VarChar(255)
-  description   String          @db.Text
-  category      String?         @db.VarChar(100)
-  isActive      Boolean         @default(true)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  videos        Video[]
-  certificates  Certificate[]
-  documents     CourseDocument[]
-  quizQuestions QuizQuestion[]
-  quizAttempts  QuizAttempt[]
+  id                   String          @id @default(uuid()) @db.VarChar(36)
+  title                String          @db.VarChar(255)
+  description          String          @db.Text
+  category             String?         @db.VarChar(100)
+  isActive             Boolean         @default(true)
+  order                Int             @default(0)
+  quizRequired         Boolean         @default(false)
+  prerequisiteCourseId String?         @db.VarChar(36)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  videos               Video[]
+  certificates         Certificate[]
+  documents            CourseDocument[]
+  quizQuestions        QuizQuestion[]
+  quizAttempts         QuizAttempt[]
+  prerequisite         Course?         @relation("CoursePrereq", fields: [prerequisiteCourseId], references: [id])
+  dependents           Course[]        @relation("CoursePrereq")
 }
 
 model Video {
@@ -81,15 +86,16 @@ model Progress {
 }
 
 model Certificate {
-  id        String    @id @default(uuid()) @db.VarChar(36)
-  userId    String    @db.VarChar(36)
-  courseId  String    @db.VarChar(36)
-  filePath  String    @db.VarChar(512)
-  tier      CertTier?
-  quizScore Float?
-  issuedAt  DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid()) @db.VarChar(36)
+  userId      String    @db.VarChar(36)
+  courseId    String    @db.VarChar(36)
+  filePath    String    @db.VarChar(512)
+  tier        CertTier?
+  quizScore   Float?
+  verifyToken String    @unique @default(uuid()) @db.VarChar(36)
+  issuedAt    DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
 }
@@ -136,4 +142,15 @@ model SiteSetting {
   key       String   @id @db.VarChar(100)
   value     String   @db.LongText
   updatedAt DateTime @updatedAt
+}
+
+model OtpCode {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  email     String   @db.VarChar(191)
+  codeHash  String   @db.VarChar(255)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
 }

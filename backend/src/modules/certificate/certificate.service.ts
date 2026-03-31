@@ -65,5 +65,9 @@ export const certificateService = {
     return certificateRepository.findAllByUser(userId);
   },
 
+  async verifyByToken(verifyToken: string) {
+    return certificateRepository.findByVerifyToken(verifyToken);
+  },
+
   getUserTier,
 };

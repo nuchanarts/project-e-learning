@@ -11,6 +11,7 @@ import CourseDetailPage from './pages/courses/CourseDetailPage';
 import CertificatesPage from './pages/CertificatesPage';
 import AdminPage from './pages/admin/AdminPage';
 import HelpPage from './pages/HelpPage';
+import VerifyPage from './pages/VerifyPage';
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -76,6 +77,7 @@ export default function App() {
                 </AuthenticatedLayout>
               }
             />
+            <Route path="/verify/:token" element={<VerifyPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </AuthProvider>

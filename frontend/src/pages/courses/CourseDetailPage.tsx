@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { courseService, type Course, type Video } from '../../services/courseService';
 import { progressService, type ProgressRecord } from '../../services/progressService';
 import { certificateService } from '../../services/certificateService';
@@ -9,6 +9,8 @@ import { QuizModal } from '../../components/ui/QuizModal';
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const resumeVideoId = searchParams.get('resume');
   const [course, setCourse] = useState<Course | null>(null);
   const [progress, setProgress] = useState<ProgressRecord[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -27,7 +29,8 @@ export default function CourseDetailPage() {
       .then(([c, p, qr]) => {
         setCourse(c);
         setProgress(p);
-        setSelectedVideo(c.videos[0] ?? null);
+        const resumeVideo = resumeVideoId ? c.videos.find((v) => v.id === resumeVideoId) : null;
+        setSelectedVideo(resumeVideo ?? c.videos[0] ?? null);
         if (c.videos.length > 0 && p.filter((x) => x.completed).length === c.videos.length)
           setCourseCompleted(true);
         if (qr?.passed) setQuizPassed(true);
@@ -180,6 +183,11 @@ export default function CourseDetailPage() {
                     videoId={selectedVideo.id}
                     courseId={course.id}
                     url={selectedVideo.url}
+                    resumeSeconds={
+                      selectedVideo.id === resumeVideoId
+                        ? (getVP(selectedVideo.id)?.watchedSeconds ?? undefined)
+                        : undefined
+                    }
                     onProgress={handleProgress}
                   />
                 </div>

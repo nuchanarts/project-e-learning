@@ -5,6 +5,7 @@ export interface ProgressRecord {
   courseId: string;
   percent: number;
   completed: boolean;
+  watchedSeconds?: number;
 }
 
 export const progressService = {

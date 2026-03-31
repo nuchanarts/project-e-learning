@@ -12,7 +12,7 @@ type Phase = 'loading' | 'quiz' | 'result' | 'error';
 export function QuizModal({ courseId, onClose, onPassed }: Props) {
   const [phase, setPhase] = useState<Phase>('loading');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [answers, setAnswers] = useState<(number | null)[]>([]);
+  const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<QuizResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -21,17 +21,17 @@ export function QuizModal({ courseId, onClose, onPassed }: Props) {
       .getQuestions(courseId)
       .then((qs) => {
         setQuestions(qs);
-        setAnswers(new Array(qs.length).fill(null));
+        setAnswers({});
         setPhase('quiz');
       })
       .catch(() => setPhase('error'));
   }, [courseId]);
 
   const handleSubmit = async () => {
-    if (answers.some((a) => a === null)) return;
+    if (questions.some((q) => answers[q.id] === undefined)) return;
     setSubmitting(true);
     try {
-      const res = await quizService.submitAttempt(courseId, answers as number[]);
+      const res = await quizService.submitAttempt(courseId, answers);
       setResult(res);
       setPhase('result');
       if (res.passed) onPassed();
@@ -42,7 +42,7 @@ export function QuizModal({ courseId, onClose, onPassed }: Props) {
     }
   };
 
-  const allAnswered = answers.length > 0 && answers.every((a) => a !== null);
+  const allAnswered = questions.length > 0 && questions.every((q) => answers[q.id] !== undefined);
 
   return (
     <div
@@ -157,22 +157,16 @@ export function QuizModal({ courseId, onClose, onPassed }: Props) {
                           padding: '10px 14px',
                           borderRadius: 10,
                           cursor: 'pointer',
-                          border: `1px solid ${answers[qi] === oi ? 'var(--primary)' : 'var(--border)'}`,
-                          background: answers[qi] === oi ? 'var(--primary-light)' : 'var(--bg)',
+                          border: `1px solid ${answers[q.id] === oi ? 'var(--primary)' : 'var(--border)'}`,
+                          background: answers[q.id] === oi ? 'var(--primary-light)' : 'var(--bg)',
                           transition: 'all 0.15s',
                         }}
                       >
                         <input
                           type="radio"
-                          name={`q-${qi}`}
-                          checked={answers[qi] === oi}
-                          onChange={() =>
-                            setAnswers((prev) => {
-                              const a = [...prev];
-                              a[qi] = oi;
-                              return a;
-                            })
-                          }
+                          name={`q-${q.id}`}
+                          checked={answers[q.id] === oi}
+                          onChange={() => setAnswers((prev) => ({ ...prev, [q.id]: oi }))}
                           style={{ accentColor: 'var(--primary)' }}
                         />
                         <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{opt}</span>
@@ -231,7 +225,7 @@ export function QuizModal({ courseId, onClose, onPassed }: Props) {
                   <button
                     onClick={() => {
                       setPhase('quiz');
-                      setAnswers(new Array(questions.length).fill(null));
+                      setAnswers({});
                       setResult(null);
                     }}
                     className="btn-secondary"

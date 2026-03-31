@@ -18,7 +18,7 @@ export const quizService = {
   getQuestions: (courseId: string) =>
     api.get<QuizQuestion[]>(`/quiz/${courseId}`).then((r) => r.data),
 
-  submitAttempt: (courseId: string, answers: number[]) =>
+  submitAttempt: (courseId: string, answers: Record<string, number>) =>
     api.post<QuizResult>(`/quiz/${courseId}/attempt`, { answers }).then((r) => r.data),
 
   getResult: (courseId: string) =>

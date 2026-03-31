@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { AuthRequest } from '../../middleware/auth.middleware';
 import { courseService } from './course.service';
 
 export const courseController = {
@@ -12,9 +13,9 @@ export const courseController = {
     }
   },
 
-  async getById(req: Request, res: Response, next: NextFunction) {
+  async getById(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const course = await courseService.getById(req.params.id);
+      const course = await courseService.getById(req.params.id, req.user?.id);
       res.json(course);
     } catch (err) {
       next(err);

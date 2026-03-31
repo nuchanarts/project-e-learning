@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 
@@ -16,6 +16,9 @@ interface DashboardData {
     isCompleted: boolean;
     totalVideos: number;
     completedVideos: number;
+    resumeVideoId?: string | null;
+    resumeVideoTitle?: string | null;
+    resumeSeconds?: number | null;
   }>;
 }
 
@@ -39,6 +42,7 @@ const ICONS = ['💊', '🩺', '🏥', '🧬', '💉', '🩻', '🏃', '🍎'];
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -266,11 +270,12 @@ export default function DashboardPage() {
           }}
         >
           {data.courses.map((course, i) => (
-            <Link
+            <div
               key={course.id}
-              to={`/courses/${course.id}`}
               className="course-card"
               data-testid="course-progress"
+              style={{ cursor: 'default', textDecoration: 'none' }}
+              onClick={() => navigate(`/courses/${course.id}`)}
             >
               <div className="course-thumb" style={{ background: THUMBS[i % THUMBS.length] }}>
                 <span className="course-thumb-icon" style={{ fontSize: 44 }}>
@@ -304,8 +309,49 @@ export default function DashboardPage() {
                     }}
                   />
                 </div>
+                {!course.isCompleted && course.resumeVideoId && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/courses/${course.id}?resume=${course.resumeVideoId}`);
+                    }}
+                    style={{
+                      marginTop: 10,
+                      width: '100%',
+                      padding: '7px 12px',
+                      borderRadius: 8,
+                      border: 'none',
+                      background: 'linear-gradient(90deg,#7B68EE,#9B8FFF)',
+                      color: '#fff',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    ▶ เรียนต่อ
+                    {course.resumeVideoTitle && (
+                      <span
+                        style={{
+                          fontWeight: 400,
+                          opacity: 0.85,
+                          maxWidth: 120,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        — {course.resumeVideoTitle}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}

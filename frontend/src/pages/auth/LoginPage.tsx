@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage, LANGUAGES } from '../../contexts/LanguageContext';
@@ -14,6 +14,18 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem(REMEMBER_KEY));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const currentLang = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,40 +95,114 @@ export default function LoginPage() {
       </div>
 
       {/* ─── Right form panel ─── */}
-      <div className="auth-right">
-        <div className="auth-form-box anim-up">
-          {/* Language selector on auth page */}
-          <div
+      <div className="auth-right" style={{ position: 'relative' }}>
+        {/* Floating language picker — bottom-right */}
+        <div ref={langRef} style={{ position: 'absolute', bottom: 20, right: 20, zIndex: 50 }}>
+          <button
+            onClick={() => setLangOpen((o) => !o)}
+            title="เปลี่ยนภาษา"
             style={{
               display: 'flex',
-              justifyContent: 'flex-end',
-              marginBottom: 16,
-              gap: 6,
-              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: 5,
+              padding: '6px 12px 6px 8px',
+              borderRadius: 20,
+              border: `1.5px solid ${langOpen ? '#7B68EE' : '#D1D5DB'}`,
+              background: '#fff',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#374151',
+              transition: 'border-color 0.15s, box-shadow 0.15s',
             }}
           >
-            {LANGUAGES.map((l) => (
-              <button
-                key={l.code}
-                onClick={() => setLang(l.code)}
-                title={l.label}
+            <span style={{ fontSize: 18 }}>{currentLang.flag}</span>
+            <span>{currentLang.code.toUpperCase()}</span>
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 10 10"
+              style={{
+                transform: langOpen ? 'rotate(180deg)' : 'none',
+                transition: 'transform 0.2s',
+                opacity: 0.5,
+              }}
+            >
+              <path
+                d="M2 3.5l3 3 3-3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                fill="none"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+
+          {langOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 'calc(100% + 8px)',
+                right: 0,
+                background: '#ffffff',
+                border: '1px solid #E5E7EB',
+                borderRadius: 14,
+                boxShadow: '0 -8px 30px rgba(0,0,0,0.12)',
+                zIndex: 100,
+                minWidth: 175,
+                maxHeight: 280,
+                overflowY: 'auto',
+                padding: '6px',
+              }}
+            >
+              <div
                 style={{
-                  padding: '3px 8px',
-                  borderRadius: 14,
-                  border: `1px solid ${l.code === lang ? 'var(--primary)' : 'var(--border)'}`,
-                  background: l.code === lang ? 'var(--primary)' : 'transparent',
-                  color: l.code === lang ? '#fff' : 'var(--text-muted)',
-                  fontSize: 11,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  fontWeight: 600,
+                  padding: '4px 10px 8px',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: '#9CA3AF',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
                 }}
               >
-                {l.flag} {l.label}
-              </button>
-            ))}
-          </div>
+                🌐 Language
+              </div>
+              {LANGUAGES.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => {
+                    setLang(l.code);
+                    setLangOpen(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    width: '100%',
+                    padding: '9px 10px',
+                    border: 'none',
+                    borderRadius: 9,
+                    background: l.code === lang ? '#EDE9FE' : '#ffffff',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: l.code === lang ? 700 : 400,
+                    color: l.code === lang ? '#7B68EE' : '#1F2937',
+                    fontFamily: 'inherit',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span style={{ fontSize: 20 }}>{l.flag}</span>
+                  <span style={{ flex: 1 }}>{l.label}</span>
+                  {l.code === lang && <span style={{ color: '#7B68EE' }}>✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
+        <div className="auth-form-box anim-up">
           <h2 className="auth-form-title">{t.login_welcome}</h2>
           <p className="auth-form-sub">{t.login_subtitle}</p>
 

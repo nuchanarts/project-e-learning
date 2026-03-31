@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from './auth.service';
+import { otpService } from './otp.service';
 
 export const authController = {
   async register(req: Request, res: Response, next: NextFunction) {
@@ -15,8 +16,42 @@ export const authController = {
   async login(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, password } = req.body;
-      const result = await authService.login(email, password);
+      const otpEnabled = await otpService.isOtpEnabled();
+
+      if (otpEnabled) {
+        // Validate credentials only — don't return token yet
+        await authService.validateCredentials(email, password);
+        await otpService.sendOtp(email);
+        res.json({ otpRequired: true });
+      } else {
+        const result = await authService.login(email, password);
+        res.json(result);
+      }
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async verifyOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, otp } = req.body;
+      const valid = await otpService.verifyOtp(email, otp);
+      if (!valid) {
+        res.status(401).json({ message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ' });
+        return;
+      }
+      const result = await authService.loginByEmail(email);
       res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async resendOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      await otpService.sendOtp(email);
+      res.json({ ok: true });
     } catch (err) {
       next(err);
     }

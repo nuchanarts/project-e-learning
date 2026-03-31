@@ -5,13 +5,21 @@ interface VideoPlayerProps {
   videoId: string;
   courseId: string;
   url: string;
+  resumeSeconds?: number;
   onProgress?: (percent: number, completed: boolean) => void;
 }
 
-export function VideoPlayer({ videoId, courseId, url, onProgress }: VideoPlayerProps) {
+export function VideoPlayer({
+  videoId,
+  courseId,
+  url,
+  resumeSeconds,
+  onProgress,
+}: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const resumedRef = useRef(false);
 
   const saveProgress = useCallback(
     async (percent: number, watchedSeconds?: number) => {
@@ -63,6 +71,14 @@ export function VideoPlayer({ videoId, courseId, url, onProgress }: VideoPlayerP
     saveProgress(percent, Math.floor(video.currentTime));
   }, [saveProgress, stopHeartbeat]);
 
+  // Seek to resume position when video metadata loads
+  const handleLoadedMetadata = useCallback(() => {
+    if (resumeSeconds && resumeSeconds > 0 && !resumedRef.current && videoRef.current) {
+      resumedRef.current = true;
+      videoRef.current.currentTime = resumeSeconds;
+    }
+  }, [resumeSeconds]);
+
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -76,6 +92,7 @@ export function VideoPlayer({ videoId, courseId, url, onProgress }: VideoPlayerP
       src={url}
       controls
       className="w-full rounded-lg bg-black"
+      onLoadedMetadata={handleLoadedMetadata}
       onTimeUpdate={handleTimeUpdate}
       onPlay={startHeartbeat}
       onPause={handlePauseOrEnd}

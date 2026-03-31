@@ -83,6 +83,21 @@ export const authService = {
     return { user: formatUser(user), ...tokens };
   },
 
+  async validateCredentials(email: string, password: string) {
+    const user = await authRepository.findByEmail(email);
+    if (!user) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
+    return user;
+  },
+
+  async loginByEmail(email: string) {
+    const user = await authRepository.findByEmail(email);
+    if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
+    const tokens = generateTokens(user.id, user.email, user.role);
+    return { user: formatUser(user), ...tokens };
+  },
+
   async refresh(refreshToken: string) {
     try {
       const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET!) as any;
