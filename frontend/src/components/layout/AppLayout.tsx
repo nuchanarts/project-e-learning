@@ -82,9 +82,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          {/* Right area: Language + User */}
+          {/* Right area: User → Language (far-right) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* ── Language Selector ── */}
+            {/* User area */}
+            <div className="navbar-user">
+              <div className="navbar-avatar" title={user?.name}>
+                {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
+              </div>
+              <span className="navbar-user-name">{user?.name}</span>
+              <button data-testid="logout-button" className="navbar-logout" onClick={handleLogout}>
+                {t.nav_logout}
+              </button>
+            </div>
+
+            {/* ── Language Selector (far right) ── */}
             <div ref={langRef} style={{ position: 'relative' }}>
               <button
                 onClick={() => setLangOpen((o) => !o)}
@@ -93,38 +104,75 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 5,
-                  padding: '5px 10px',
-                  borderRadius: 20,
-                  border: '1px solid var(--border)',
-                  background: 'var(--bg)',
+                  padding: '5px 9px 5px 7px',
+                  borderRadius: 10,
+                  border: `1.5px solid ${langOpen ? 'var(--primary)' : 'var(--border)'}`,
+                  background: langOpen ? 'rgba(123,104,238,0.08)' : 'var(--card)',
                   cursor: 'pointer',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: 'var(--text-primary)',
                   fontFamily: 'inherit',
-                  whiteSpace: 'nowrap',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                  transition: 'border-color 0.15s, background 0.15s',
                 }}
               >
-                <span style={{ fontSize: 16 }}>{currentLang.flag}</span>
-                <span>{currentLang.label}</span>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>▼</span>
+                <span style={{ fontSize: 17, lineHeight: 1 }}>{currentLang.flag}</span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: langOpen ? 'var(--primary)' : 'var(--text-primary)',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  {currentLang.code.toUpperCase()}
+                </span>
+                <svg
+                  width="8"
+                  height="8"
+                  viewBox="0 0 8 8"
+                  style={{
+                    transform: langOpen ? 'rotate(180deg)' : 'rotate(0)',
+                    transition: 'transform 0.2s',
+                    opacity: 0.45,
+                  }}
+                >
+                  <path
+                    d="M1 2.5l3 3 3-3"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    fill="none"
+                    strokeLinecap="round"
+                  />
+                </svg>
               </button>
 
               {langOpen && (
                 <div
                   style={{
                     position: 'absolute',
-                    top: 'calc(100% + 6px)',
+                    top: 'calc(100% + 8px)',
                     right: 0,
                     background: 'var(--card)',
                     border: '1px solid var(--border)',
-                    borderRadius: 12,
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                    zIndex: 200,
-                    minWidth: 160,
+                    borderRadius: 14,
+                    boxShadow: '0 16px 40px rgba(0,0,0,0.16)',
+                    zIndex: 300,
+                    minWidth: 175,
                     overflow: 'hidden',
+                    padding: '6px',
                   }}
                 >
+                  <div
+                    style={{
+                      padding: '4px 10px 8px',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: 'var(--text-muted)',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    🌐 Language
+                  </div>
                   {LANGUAGES.map((l) => (
                     <button
                       key={l.code}
@@ -137,47 +185,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         alignItems: 'center',
                         gap: 10,
                         width: '100%',
-                        padding: '10px 16px',
+                        padding: '8px 10px',
                         border: 'none',
-                        background: l.code === lang ? 'rgba(123,104,238,0.08)' : 'transparent',
+                        borderRadius: 9,
+                        background: l.code === lang ? 'rgba(123,104,238,0.1)' : 'transparent',
                         cursor: 'pointer',
                         fontSize: 13,
-                        fontWeight: l.code === lang ? 700 : 500,
+                        fontWeight: l.code === lang ? 700 : 400,
                         color: l.code === lang ? 'var(--primary)' : 'var(--text-primary)',
                         fontFamily: 'inherit',
                         textAlign: 'left',
                         transition: 'background 0.1s',
                       }}
-                      onMouseEnter={(e) => {
-                        if (l.code !== lang)
-                          (e.currentTarget as HTMLButtonElement).style.background =
-                            'rgba(123,104,238,0.04)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (l.code !== lang)
-                          (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                      }}
                     >
-                      <span style={{ fontSize: 18 }}>{l.flag}</span>
-                      <span>{l.label}</span>
+                      <span style={{ fontSize: 20 }}>{l.flag}</span>
+                      <span style={{ flex: 1 }}>{l.label}</span>
                       {l.code === lang && (
-                        <span style={{ marginLeft: 'auto', fontSize: 12 }}>✓</span>
+                        <span style={{ fontSize: 13, color: 'var(--primary)' }}>✓</span>
                       )}
                     </button>
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* User area */}
-            <div className="navbar-user">
-              <div className="navbar-avatar" title={user?.name}>
-                {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
-              </div>
-              <span className="navbar-user-name">{user?.name}</span>
-              <button data-testid="logout-button" className="navbar-logout" onClick={handleLogout}>
-                {t.nav_logout}
-              </button>
             </div>
           </div>
         </div>
