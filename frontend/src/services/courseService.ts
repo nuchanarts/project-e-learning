@@ -21,6 +21,7 @@ export interface Course {
   title: string;
   description: string;
   category?: string | null;
+  price?: number | null;
   videos: Video[];
   documents: CourseDocument[];
 }

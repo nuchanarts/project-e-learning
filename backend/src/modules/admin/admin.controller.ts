@@ -4,6 +4,7 @@ import { adminService } from './admin.service';
 import { sheetsService } from './sheets.service';
 import { excelService } from './excel.service';
 import { onlineTracker } from '../../lib/onlineTracker';
+import { paymentService } from '../payment/payment.service';
 
 export const adminController = {
   async getAnalytics(req: AuthRequest, res: Response, next: NextFunction) {
@@ -206,6 +207,14 @@ export const adminController = {
       res.json(
         await adminService.updateUserProfile(req.params.userId, { name, hospital, position }),
       );
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async listOrders(_req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      res.json(await paymentService.listAllOrders());
     } catch (err) {
       next(err);
     }

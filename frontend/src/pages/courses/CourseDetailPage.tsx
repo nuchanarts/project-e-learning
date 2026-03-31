@@ -4,8 +4,10 @@ import { courseService, type Course, type Video } from '../../services/courseSer
 import { progressService, type ProgressRecord } from '../../services/progressService';
 import { certificateService } from '../../services/certificateService';
 import { quizService } from '../../services/quizService';
+import { paymentService } from '../../services/paymentService';
 import { VideoPlayer } from '../../components/ui/VideoPlayer';
 import { QuizModal } from '../../components/ui/QuizModal';
+import { PaymentModal } from '../../components/ui/PaymentModal';
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +21,8 @@ export default function CourseDetailPage() {
   const [quizPassed, setQuizPassed] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [showPayment, setShowPayment] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -26,10 +30,12 @@ export default function CourseDetailPage() {
       courseService.getById(id),
       progressService.getForCourse(id),
       quizService.getResult(id),
+      paymentService.checkAccess(id),
     ])
-      .then(([c, p, qr]) => {
+      .then(([c, p, qr, access]) => {
         setCourse(c);
         setProgress(p);
+        setHasAccess(access);
         const resumeVideo = resumeVideoId ? c.videos.find((v) => v.id === resumeVideoId) : null;
         setSelectedVideo(resumeVideo ?? c.videos[0] ?? null);
         if (c.videos.length > 0 && p.filter((x) => x.completed).length === c.videos.length)
@@ -127,8 +133,15 @@ export default function CourseDetailPage() {
             }}
           >
             <div style={{ flex: 1 }}>
-              <div style={{ marginBottom: 6 }}>
+              <div style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span className="badge badge-purple">{course.category ?? 'ทั่วไป'}</span>
+                {course.price ? (
+                  <span className="badge" style={{ background: '#FEF3C7', color: '#D97706' }}>
+                    💳 ฿{course.price.toLocaleString()}
+                  </span>
+                ) : (
+                  <span className="badge badge-green">ฟรี</span>
+                )}
               </div>
               <h1
                 style={{
@@ -182,8 +195,44 @@ export default function CourseDetailPage() {
           </div>
         </div>
 
+        {/* ─── Paywall ─── */}
+        {hasAccess === false && course.price && (
+          <div
+            className="card"
+            style={{ padding: '32px 24px', textAlign: 'center', marginBottom: 20 }}
+          >
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                marginBottom: 8,
+              }}
+            >
+              คอร์สนี้มีค่าใช้จ่าย
+            </div>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 20 }}>
+              ชำระค่าคอร์สเพื่อเข้าถึงเนื้อหาทั้งหมด
+            </div>
+            <button
+              onClick={() => setShowPayment(true)}
+              className="btn-primary"
+              style={{ fontSize: 16, padding: '12px 32px' }}
+            >
+              💳 ซื้อคอร์ส ฿{course.price.toLocaleString()}
+            </button>
+          </div>
+        )}
+
         {/* ─── Two-column layout ─── */}
-        <div className="detail-grid">
+        <div
+          className="detail-grid"
+          style={{
+            opacity: hasAccess === false ? 0.4 : 1,
+            pointerEvents: hasAccess === false ? 'none' : undefined,
+          }}
+        >
           {/* Video + info */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {selectedVideo && (
@@ -196,6 +245,7 @@ export default function CourseDetailPage() {
                     videoId={selectedVideo.id}
                     courseId={course.id}
                     url={selectedVideo.url}
+                    duration={selectedVideo.duration ?? undefined}
                     resumeSeconds={
                       selectedVideo.id === resumeVideoId
                         ? (getVP(selectedVideo.id)?.watchedSeconds ?? undefined)
@@ -512,6 +562,19 @@ export default function CourseDetailPage() {
           onPassed={() => {
             setQuizPassed(true);
             setShowQuiz(false);
+          }}
+        />
+      )}
+
+      {showPayment && course && course.price && (
+        <PaymentModal
+          courseId={course.id}
+          courseTitle={course.title}
+          price={course.price}
+          onClose={() => setShowPayment(false)}
+          onSuccess={() => {
+            setShowPayment(false);
+            setHasAccess(true);
           }}
         />
       )}

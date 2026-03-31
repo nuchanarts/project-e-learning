@@ -169,8 +169,18 @@ export default function CourseListPage() {
                   <span className="course-thumb-icon">{thumb.icon}</span>
                 </div>
                 <div className="course-body">
-                  <div className="course-badge">
+                  <div
+                    className="course-badge"
+                    style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}
+                  >
                     <span className="badge badge-purple">{course.category ?? 'ทั่วไป'}</span>
+                    {course.price ? (
+                      <span className="badge" style={{ background: '#FEF3C7', color: '#D97706' }}>
+                        💳 ฿{course.price.toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="badge badge-green">ฟรี</span>
+                    )}
                   </div>
                   <div className="course-title">{course.title}</div>
                   <div className="course-desc">{course.description}</div>

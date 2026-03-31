@@ -10,6 +10,7 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import quizRoutes from './modules/quiz/quiz.routes';
 import helpRoutes from './modules/help/help.routes';
+import paymentRoutes from './modules/payment/payment.routes';
 import { errorHandler } from './middleware/error.middleware';
 
 const app = express();
@@ -27,6 +28,7 @@ app.use('/dashboard', dashboardRoutes);
 app.use('/admin', adminRoutes);
 app.use('/quiz', quizRoutes);
 app.use('/help', helpRoutes);
+app.use('/payment', paymentRoutes);
 
 app.use(errorHandler);
 

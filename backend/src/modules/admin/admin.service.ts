@@ -74,13 +74,24 @@ export const adminService = {
     };
   },
 
-  async createCourse(data: { title: string; description: string; category?: string }) {
+  async createCourse(data: {
+    title: string;
+    description: string;
+    category?: string;
+    price?: number | null;
+  }) {
     return prisma.course.create({ data });
   },
 
   async updateCourse(
     id: string,
-    data: { title?: string; description?: string; category?: string; isActive?: boolean },
+    data: {
+      title?: string;
+      description?: string;
+      category?: string;
+      isActive?: boolean;
+      price?: number | null;
+    },
   ) {
     return prisma.course.update({ where: { id }, data });
   },

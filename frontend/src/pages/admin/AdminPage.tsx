@@ -1111,6 +1111,23 @@ export default function AdminPage() {
                     onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                   />
                 </div>
+                <div className="form-group">
+                  <label className="form-label">ราคา (บาท) — เว้นว่างหากฟรี</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    min={0}
+                    step={1}
+                    placeholder="0 = ฟรี"
+                    value={(form as any).price ?? ''}
+                    onChange={(e) =>
+                      setForm((f: any) => ({
+                        ...f,
+                        price: e.target.value === '' ? null : Number(e.target.value),
+                      }))
+                    }
+                  />
+                </div>
                 {editingId && (
                   <div className="form-group">
                     <label

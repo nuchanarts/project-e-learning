@@ -38,4 +38,7 @@ router.put('/users/:userId/profile', adminController.updateUserProfile);
 router.post('/export/sheets', adminController.exportSheets);
 router.get('/export/excel', adminController.exportExcel);
 
+// Orders
+router.get('/orders', adminController.listOrders);
+
 export default router;

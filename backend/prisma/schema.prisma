@@ -34,6 +34,7 @@ model User {
   progress     Progress[]
   certificates Certificate[]
   quizAttempts QuizAttempt[]
+  orders       Order[]
 }
 
 model Course {
@@ -43,6 +44,7 @@ model Course {
   category             String?         @db.VarChar(100)
   isActive             Boolean         @default(true)
   order                Int             @default(0)
+  price                Float?          // null = free
   quizRequired         Boolean         @default(false)
   prerequisiteCourseId String?         @db.VarChar(36)
   createdAt            DateTime        @default(now())
@@ -52,6 +54,7 @@ model Course {
   documents            CourseDocument[]
   quizQuestions        QuizQuestion[]
   quizAttempts         QuizAttempt[]
+  orders               Order[]
   prerequisite         Course?         @relation("CoursePrereq", fields: [prerequisiteCourseId], references: [id])
   dependents           Course[]        @relation("CoursePrereq")
 }
@@ -144,6 +147,33 @@ model SiteSetting {
   key       String   @id @db.VarChar(100)
   value     String   @db.LongText
   updatedAt DateTime @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model Order {
+  id            String      @id @default(uuid()) @db.VarChar(36)
+  userId        String      @db.VarChar(36)
+  courseId      String      @db.VarChar(36)
+  amount        Float
+  status        OrderStatus @default(PENDING)
+  paymentRef    String?     @db.VarChar(255) // gateway transaction ref
+  cardLast4     String?     @db.VarChar(4)
+  cardBrand     String?     @db.VarChar(20)
+  paidAt        DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course        Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId, status])
+  @@index([userId])
+  @@index([courseId])
 }
 
 model OtpCode {
