@@ -62,6 +62,7 @@ interface CourseItem {
   category?: string;
   isActive: boolean;
   order: number;
+  price?: number | null;
   videos: Video[];
   documents: Document[];
 }
@@ -110,7 +111,13 @@ export default function AdminPage() {
 
   // Course form state (create or edit)
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ title: '', description: '', category: '', isActive: true });
+  const [form, setForm] = useState<{
+    title: string;
+    description: string;
+    category: string;
+    isActive: boolean;
+    price: number | null;
+  }>({ title: '', description: '', category: '', isActive: true, price: null });
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -184,6 +191,7 @@ export default function AdminPage() {
       description: c.description,
       category: c.category ?? '',
       isActive: c.isActive,
+      price: c.price ?? null,
     });
     setExpandedCourseId(null);
     setQuizCourseId(null);
@@ -191,7 +199,7 @@ export default function AdminPage() {
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setForm({ title: '', description: '', category: '', isActive: true });
+    setForm({ title: '', description: '', category: '', isActive: true, price: null });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -207,10 +215,11 @@ export default function AdminPage() {
           title: form.title,
           description: form.description,
           category: form.category || undefined,
+          price: form.price ?? null,
         });
         showSuccess('เพิ่มคอร์สสำเร็จ!');
       }
-      setForm({ title: '', description: '', category: '', isActive: true });
+      setForm({ title: '', description: '', category: '', isActive: true, price: null });
       await loadData();
     } catch {
       /* ignore */
@@ -1119,9 +1128,9 @@ export default function AdminPage() {
                     min={0}
                     step={1}
                     placeholder="0 = ฟรี"
-                    value={(form as any).price ?? ''}
+                    value={form.price ?? ''}
                     onChange={(e) =>
-                      setForm((f: any) => ({
+                      setForm((f) => ({
                         ...f,
                         price: e.target.value === '' ? null : Number(e.target.value),
                       }))

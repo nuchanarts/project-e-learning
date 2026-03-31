@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { courseService, type Course } from '../../services/courseService';
 import { certificateService } from '../../services/certificateService';
+import { useCart } from '../../contexts/CartContext';
 
 const THUMBS = [
   { bg: 'linear-gradient(135deg,#7B68EE,#9B8FFF)', icon: '💊' },
@@ -15,6 +16,8 @@ const THUMBS = [
 ];
 
 export default function CourseListPage() {
+  const { add, remove, has } = useCart();
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [completedCourseIds, setCompletedCourseIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -157,13 +160,14 @@ export default function CourseListPage() {
         <div className="course-grid">
           {filtered.map((course, i) => {
             const thumb = THUMBS[i % THUMBS.length];
+            const inCart = has(course.id);
             return (
-              <Link
+              <div
                 key={course.id}
-                to={`/courses/${course.id}`}
                 className="course-card"
                 data-testid="course-card"
                 data-completed={completedCourseIds.has(course.id) ? 'true' : 'false'}
+                onClick={() => navigate(`/courses/${course.id}`)}
               >
                 <div className="course-thumb" style={{ background: thumb.bg }}>
                   <span className="course-thumb-icon">{thumb.icon}</span>
@@ -186,10 +190,42 @@ export default function CourseListPage() {
                   <div className="course-desc">{course.description}</div>
                   <div className="course-meta">
                     <span className="course-videos">🎬 {course.videos?.length ?? 0} วิดีโอ</span>
-                    <span className="course-arrow">เริ่มเรียน →</span>
+                    {course.price ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (inCart) {
+                            remove(course.id);
+                          } else {
+                            add({
+                              id: course.id,
+                              title: course.title,
+                              price: course.price!,
+                              category: course.category,
+                            });
+                          }
+                        }}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 20,
+                          border: `1.5px solid ${inCart ? 'rgba(239,68,68,0.3)' : 'var(--border-strong)'}`,
+                          background: inCart ? 'rgba(239,68,68,0.07)' : 'var(--primary-light)',
+                          color: inCart ? '#DC2626' : 'var(--primary)',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {inCart ? '✕ ลบออก' : '🛒 ใส่ตะกร้า'}
+                      </button>
+                    ) : (
+                      <span className="course-arrow">เริ่มเรียน →</span>
+                    )}
                   </div>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

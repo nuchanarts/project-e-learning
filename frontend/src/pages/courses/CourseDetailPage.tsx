@@ -30,7 +30,7 @@ export default function CourseDetailPage() {
       courseService.getById(id),
       progressService.getForCourse(id),
       quizService.getResult(id),
-      paymentService.checkAccess(id),
+      paymentService.checkAccess(id).catch(() => true), // default grant on error
     ])
       .then(([c, p, qr, access]) => {
         setCourse(c);

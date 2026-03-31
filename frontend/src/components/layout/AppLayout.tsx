@@ -2,10 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage, LANGUAGES } from '../../contexts/LanguageContext';
+import { useCart } from '../../contexts/CartContext';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const { t, lang, setLang } = useLanguage();
+  const { count: cartCount } = useCart();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -81,6 +83,50 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               );
             })}
           </nav>
+
+          {/* Cart icon */}
+          <Link
+            to="/cart"
+            style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: cartCount > 0 ? 'var(--primary-light)' : 'transparent',
+              border: `1.5px solid ${cartCount > 0 ? 'var(--border-strong)' : 'var(--border)'}`,
+              textDecoration: 'none',
+              fontSize: 18,
+              flexShrink: 0,
+              transition: 'all 0.18s',
+            }}
+            title="ตะกร้าสินค้า"
+          >
+            🛒
+            {cartCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -6,
+                  right: -6,
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  background: 'var(--primary)',
+                  color: '#fff',
+                  fontSize: 10,
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {cartCount}
+              </span>
+            )}
+          </Link>
 
           {/* Right area: User → Language (far-right) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
