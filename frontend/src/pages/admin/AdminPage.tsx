@@ -30,6 +30,7 @@ interface UserItem {
   name: string;
   email: string;
   role: 'USER' | 'ADMIN';
+  isActive: boolean;
   cid?: string | null;
   hospital?: string | null;
   position?: string | null;
@@ -102,6 +103,9 @@ export default function AdminPage() {
   const [userSearch, setUserSearch] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editUserForm, setEditUserForm] = useState({ name: '', hospital: '', position: '' });
+  const [savingUser, setSavingUser] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Course form state (create or edit)
@@ -397,6 +401,46 @@ export default function AdminPage() {
     }
   };
 
+  const handleToggleActive = async (userId: string, isActive: boolean) => {
+    try {
+      await api.put(`/admin/users/${userId}/active`, { isActive });
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, isActive } : u)));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const handleStartEditUser = (u: UserItem) => {
+    setEditingUserId(u.id);
+    setEditUserForm({ name: u.name, hospital: u.hospital ?? '', position: u.position ?? '' });
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUserId) return;
+    setSavingUser(true);
+    try {
+      await api.put(`/admin/users/${editingUserId}/profile`, editUserForm);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === editingUserId
+            ? {
+                ...u,
+                name: editUserForm.name,
+                hospital: editUserForm.hospital || null,
+                position: editUserForm.position || null,
+              }
+            : u,
+        ),
+      );
+      setEditingUserId(null);
+    } catch {
+      /* ignore */
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
   const handleMoveOrder = async (index: number, direction: 'up' | 'down') => {
     const swapIndex = direction === 'up' ? index - 1 : index + 1;
     if (swapIndex < 0 || swapIndex >= courses.length) return;
@@ -620,23 +664,115 @@ export default function AdminPage() {
                           padding: '8px 12px',
                           fontWeight: 600,
                           color: 'var(--text-primary)',
+                          minWidth: 160,
                         }}
                       >
-                        {u.name}
-                        {u.cid && (
-                          <div
-                            style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400 }}
+                        {editingUserId === u.id ? (
+                          <form
+                            onSubmit={handleSaveUser}
+                            style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
                           >
-                            CID: {u.cid}
-                          </div>
+                            <input
+                              className="form-input"
+                              value={editUserForm.name}
+                              onChange={(e) =>
+                                setEditUserForm((f) => ({ ...f, name: e.target.value }))
+                              }
+                              placeholder="ชื่อ"
+                              required
+                              style={{ fontSize: 12, padding: '4px 8px' }}
+                            />
+                            <input
+                              className="form-input"
+                              value={editUserForm.hospital}
+                              onChange={(e) =>
+                                setEditUserForm((f) => ({ ...f, hospital: e.target.value }))
+                              }
+                              placeholder="โรงพยาบาล"
+                              style={{ fontSize: 12, padding: '4px 8px' }}
+                            />
+                            <input
+                              className="form-input"
+                              value={editUserForm.position}
+                              onChange={(e) =>
+                                setEditUserForm((f) => ({ ...f, position: e.target.value }))
+                              }
+                              placeholder="ตำแหน่ง"
+                              style={{ fontSize: 12, padding: '4px 8px' }}
+                            />
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button
+                                type="submit"
+                                className="btn-primary"
+                                disabled={savingUser}
+                                style={{ fontSize: 11, padding: '3px 10px' }}
+                              >
+                                {savingUser ? '...' : '💾'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingUserId(null)}
+                                className="btn-secondary"
+                                style={{ fontSize: 11, padding: '3px 8px' }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ opacity: u.isActive ? 1 : 0.5 }}>{u.name}</span>
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  padding: '1px 7px',
+                                  borderRadius: 8,
+                                  background: u.isActive ? '#DCFCE7' : '#FEE2E2',
+                                  color: u.isActive ? '#16A34A' : '#DC2626',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {u.isActive ? 'ใช้งาน' : 'ปิดใช้งาน'}
+                              </span>
+                            </div>
+                            {u.cid && (
+                              <div
+                                style={{
+                                  fontSize: 10,
+                                  color: 'var(--text-muted)',
+                                  fontWeight: 400,
+                                }}
+                              >
+                                CID: {u.cid}
+                              </div>
+                            )}
+                            <button
+                              onClick={() => handleStartEditUser(u)}
+                              style={{
+                                marginTop: 2,
+                                fontSize: 10,
+                                color: 'var(--primary)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontFamily: 'inherit',
+                                padding: 0,
+                                fontWeight: 600,
+                              }}
+                            >
+                              ✏️ แก้ไข
+                            </button>
+                          </>
                         )}
                       </td>
                       <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{u.email}</td>
                       <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>
-                        {u.hospital ?? '-'}
+                        {editingUserId === u.id ? '—' : (u.hospital ?? '-')}
                       </td>
                       <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>
-                        {u.position ?? '-'}
+                        {editingUserId === u.id ? '—' : (u.position ?? '-')}
                       </td>
                       <td style={{ padding: '8px 12px' }}>
                         <span
@@ -697,6 +833,27 @@ export default function AdminPage() {
                           <option value="USER">Staff</option>
                           <option value="ADMIN">Admin</option>
                         </select>
+                        <button
+                          onClick={() => handleToggleActive(u.id, !u.isActive)}
+                          title={u.isActive ? 'ระงับบัญชี' : 'เปิดใช้งานบัญชี'}
+                          style={{
+                            marginTop: 4,
+                            width: '100%',
+                            padding: '4px 8px',
+                            borderRadius: 7,
+                            border: `1px solid ${u.isActive ? 'rgba(239,68,68,0.25)' : 'rgba(34,197,94,0.3)'}`,
+                            background: u.isActive
+                              ? 'rgba(239,68,68,0.06)'
+                              : 'rgba(34,197,94,0.08)',
+                            color: u.isActive ? '#DC2626' : '#16A34A',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          {u.isActive ? '🔒 ปิดใช้งาน' : '✅ ใช้งาน'}
+                        </button>
                       </td>
                     </tr>
                   ))}

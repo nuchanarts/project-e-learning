@@ -180,6 +180,7 @@ export const adminService = {
         name: true,
         email: true,
         role: true,
+        isActive: true,
         cid: true,
         hospital: true,
         position: true,
@@ -192,5 +193,16 @@ export const adminService = {
 
   async updateUserRole(userId: string, role: 'USER' | 'ADMIN') {
     return prisma.user.update({ where: { id: userId }, data: { role } });
+  },
+
+  async toggleUserActive(userId: string, isActive: boolean) {
+    return prisma.user.update({ where: { id: userId }, data: { isActive } });
+  },
+
+  async updateUserProfile(
+    userId: string,
+    data: { name?: string; hospital?: string; position?: string },
+  ) {
+    return prisma.user.update({ where: { id: userId }, data });
   },
 };

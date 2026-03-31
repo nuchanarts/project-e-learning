@@ -79,6 +79,11 @@ export const authService = {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
 
+    if ((user as any).isActive === false)
+      throw Object.assign(new Error('บัญชีถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ'), {
+        status: 403,
+      });
+
     const tokens = generateTokens(user.id, user.email, user.role);
     return { user: formatUser(user), ...tokens };
   },
@@ -88,6 +93,8 @@ export const authService = {
     if (!user) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
+    if ((user as any).isActive === false)
+      throw Object.assign(new Error('บัญชีถูกระงับการใช้งาน'), { status: 403 });
     return user;
   },
 

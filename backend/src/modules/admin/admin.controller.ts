@@ -190,4 +190,24 @@ export const adminController = {
       next(err);
     }
   },
+
+  async toggleUserActive(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { isActive } = req.body;
+      res.json(await adminService.toggleUserActive(req.params.userId, Boolean(isActive)));
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async updateUserProfile(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { name, hospital, position } = req.body;
+      res.json(
+        await adminService.updateUserProfile(req.params.userId, { name, hospital, position }),
+      );
+    } catch (err) {
+      next(err);
+    }
+  },
 };

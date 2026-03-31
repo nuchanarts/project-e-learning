@@ -25,6 +25,7 @@ model User {
   passwordHash String        @db.VarChar(255)
   name         String        @db.VarChar(255)
   role         Role          @default(USER)
+  isActive     Boolean       @default(true)
   cid          String?       @unique @db.VarChar(13)
   hospital     String?       @db.VarChar(255)
   position     String?       @db.VarChar(255)
