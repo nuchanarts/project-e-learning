@@ -8,7 +8,7 @@ export const courseRepository = {
         videos: { orderBy: { order: 'asc' } },
         documents: { orderBy: { order: 'asc' } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
     });
   },
 

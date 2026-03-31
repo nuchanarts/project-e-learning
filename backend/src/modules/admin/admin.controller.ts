@@ -39,6 +39,15 @@ export const adminController = {
     }
   },
 
+  async reorderCourses(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      await adminService.reorderCourses(req.body.items);
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async addVideo(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { title, url, duration, order } = req.body;
@@ -71,16 +80,14 @@ export const adminController = {
   async createQuizQuestion(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { text, options, correctIndex, order } = req.body;
-      res
-        .status(201)
-        .json(
-          await adminService.createQuizQuestion(req.params.courseId, {
-            text,
-            options,
-            correctIndex,
-            order,
-          }),
-        );
+      res.status(201).json(
+        await adminService.createQuizQuestion(req.params.courseId, {
+          text,
+          options,
+          correctIndex,
+          order,
+        }),
+      );
     } catch (err) {
       next(err);
     }

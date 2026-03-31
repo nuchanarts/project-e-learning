@@ -85,6 +85,14 @@ export const adminService = {
     return prisma.course.update({ where: { id }, data });
   },
 
+  async reorderCourses(items: { id: string; order: number }[]) {
+    await prisma.$transaction(
+      items.map((item) =>
+        prisma.course.update({ where: { id: item.id }, data: { order: item.order } }),
+      ),
+    );
+  },
+
   async deleteCourse(id: string) {
     return prisma.course.update({ where: { id }, data: { isActive: false } });
   },

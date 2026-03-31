@@ -45,6 +45,7 @@ interface CourseItem {
   description: string;
   category?: string;
   isActive: boolean;
+  order: number;
   videos: Video[];
   documents: Document[];
 }
@@ -106,6 +107,9 @@ export default function AdminPage() {
     order: '',
   });
   const [savingQuiz, setSavingQuiz] = useState(false);
+
+  // Reorder
+  const [reordering, setReordering] = useState(false);
 
   // Export
   const [exporting, setExporting] = useState(false);
@@ -295,6 +299,23 @@ export default function AdminPage() {
     if (!confirm('ต้องการลบวิดีโอนี้?')) return;
     await api.delete(`/admin/videos/${videoId}`);
     await loadData();
+  };
+
+  const handleMoveOrder = async (index: number, direction: 'up' | 'down') => {
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= courses.length) return;
+    const reordered = [...courses];
+    [reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]];
+    const items = reordered.map((c, i) => ({ id: c.id, order: i }));
+    setCourses(reordered);
+    setReordering(true);
+    try {
+      await api.put('/admin/courses/reorder', { items });
+    } catch {
+      await loadData(); // revert on error
+    } finally {
+      setReordering(false);
+    }
   };
 
   const handleExportSheets = async () => {
@@ -667,6 +688,11 @@ export default function AdminPage() {
             <span className="badge badge-purple" style={{ marginLeft: 4 }}>
               {courses.length}
             </span>
+            {reordering && (
+              <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 400 }}>
+                กำลังบันทึก...
+              </span>
+            )}
           </h3>
 
           {courses.length === 0 ? (
@@ -689,7 +715,7 @@ export default function AdminPage() {
                 paddingRight: 4,
               }}
             >
-              {courses.map((c) => (
+              {courses.map((c, idx) => (
                 <div key={c.id}>
                   {/* Course row */}
                   <div
@@ -743,6 +769,50 @@ export default function AdminPage() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 8 }}>
+                      {/* Order up/down */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <button
+                          onClick={() => handleMoveOrder(idx, 'up')}
+                          disabled={idx === 0 || reordering}
+                          title="เลื่อนขึ้น"
+                          style={{
+                            padding: '2px 6px',
+                            borderRadius: 5,
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg)',
+                            color: idx === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
+                            fontSize: 10,
+                            cursor: idx === 0 ? 'default' : 'pointer',
+                            fontFamily: 'inherit',
+                            lineHeight: 1,
+                            opacity: idx === 0 ? 0.35 : 1,
+                          }}
+                        >
+                          ▲
+                        </button>
+                        <button
+                          onClick={() => handleMoveOrder(idx, 'down')}
+                          disabled={idx === courses.length - 1 || reordering}
+                          title="เลื่อนลง"
+                          style={{
+                            padding: '2px 6px',
+                            borderRadius: 5,
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg)',
+                            color:
+                              idx === courses.length - 1
+                                ? 'var(--text-muted)'
+                                : 'var(--text-primary)',
+                            fontSize: 10,
+                            cursor: idx === courses.length - 1 ? 'default' : 'pointer',
+                            fontFamily: 'inherit',
+                            lineHeight: 1,
+                            opacity: idx === courses.length - 1 ? 0.35 : 1,
+                          }}
+                        >
+                          ▼
+                        </button>
+                      </div>
                       <button
                         onClick={() => handleToggleExpand(c.id)}
                         style={{

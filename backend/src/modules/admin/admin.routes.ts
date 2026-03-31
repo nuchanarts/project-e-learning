@@ -9,6 +9,7 @@ router.get('/analytics', adminController.getAnalytics);
 
 // Courses
 router.post('/courses', adminController.createCourse);
+router.put('/courses/reorder', adminController.reorderCourses);
 router.put('/courses/:id', adminController.updateCourse);
 router.delete('/courses/:id', adminController.deleteCourse);
 
