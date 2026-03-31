@@ -3,7 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { courseService, type Course, type Video } from '../../services/courseService';
 import { progressService, type ProgressRecord } from '../../services/progressService';
 import { certificateService } from '../../services/certificateService';
+import { quizService } from '../../services/quizService';
 import { VideoPlayer } from '../../components/ui/VideoPlayer';
+import { QuizModal } from '../../components/ui/QuizModal';
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -12,16 +14,23 @@ export default function CourseDetailPage() {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [loading, setLoading] = useState(true);
   const [courseCompleted, setCourseCompleted] = useState(false);
+  const [quizPassed, setQuizPassed] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false);
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([courseService.getById(id), progressService.getForCourse(id)])
-      .then(([c, p]) => {
+    Promise.all([
+      courseService.getById(id),
+      progressService.getForCourse(id),
+      quizService.getResult(id),
+    ])
+      .then(([c, p, qr]) => {
         setCourse(c);
         setProgress(p);
         setSelectedVideo(c.videos[0] ?? null);
         if (c.videos.length > 0 && p.filter((x) => x.completed).length === c.videos.length)
           setCourseCompleted(true);
+        if (qr?.passed) setQuizPassed(true);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -72,262 +81,359 @@ export default function CourseDetailPage() {
   const overallPercent = totalVideos > 0 ? Math.round((completedCount / totalVideos) * 100) : 0;
 
   return (
-    <div className="anim-up">
-      {/* ─── Breadcrumb ─── */}
-      <div className="breadcrumb">
-        <Link to="/courses" className="breadcrumb-link">
-          คอร์สเรียน
-        </Link>
-        <span className="breadcrumb-sep">›</span>
-        <span className="breadcrumb-current">{course.title}</span>
-      </div>
-
-      {/* ─── Course header ─── */}
-      <div className="card" style={{ padding: '20px 24px', marginBottom: 20 }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 16,
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <div style={{ marginBottom: 6 }}>
-              <span className="badge badge-purple">สาธารณสุข</span>
-            </div>
-            <h1
-              style={{
-                fontSize: 20,
-                fontWeight: 800,
-                color: 'var(--text-primary)',
-                marginBottom: 8,
-              }}
-            >
-              {course.title}
-            </h1>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 16,
-                fontSize: 13,
-                color: 'var(--text-muted)',
-              }}
-            >
-              <span>🎬 {totalVideos} วิดีโอ</span>
-              <span>✅ เรียนจบ {completedCount} บท</span>
-            </div>
-          </div>
-          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div
-              style={{
-                fontSize: 28,
-                fontWeight: 800,
-                background: 'linear-gradient(135deg,#7B68EE,#9B8FFF)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                lineHeight: 1,
-              }}
-            >
-              {overallPercent}%
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-              ความคืบหน้า
-            </div>
-          </div>
-        </div>
-        <div style={{ marginTop: 14 }}>
-          <div className="progress-track">
-            <div
-              className={`progress-fill ${courseCompleted ? 'progress-fill-green' : ''}`}
-              style={{ width: `${overallPercent}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ─── Two-column layout ─── */}
-      <div
-        style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}
-      >
-        {/* Video + info */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {selectedVideo && (
-            <div className="card" style={{ overflow: 'hidden' }}>
-              <div
-                data-testid="video-player"
-                style={{ background: '#000', borderRadius: '16px 16px 0 0', overflow: 'hidden' }}
-              >
-                <VideoPlayer
-                  videoId={selectedVideo.id}
-                  courseId={course.id}
-                  url={selectedVideo.url}
-                  onProgress={handleProgress}
-                />
-              </div>
-              <div style={{ padding: '16px 20px' }}>
-                <h2
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 700,
-                    color: 'var(--text-primary)',
-                    marginBottom: 4,
-                  }}
-                >
-                  {selectedVideo.title}
-                </h2>
-                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                  ⏱️ {Math.floor(selectedVideo.duration / 60)} นาที {selectedVideo.duration % 60}{' '}
-                  วินาที
-                </p>
-                {/* Progress bar for current video */}
-                {(() => {
-                  const vp = getVP(selectedVideo.id);
-                  return vp && vp.percent > 0 ? (
-                    <div style={{ marginTop: 10 }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          fontSize: 11,
-                          color: 'var(--text-muted)',
-                          marginBottom: 4,
-                        }}
-                      >
-                        <span>ความคืบหน้าวิดีโอนี้</span>
-                        <span>{Math.round(vp.percent)}%</span>
-                      </div>
-                      <div className="progress-track" data-testid="progress-bar">
-                        <div
-                          className={`progress-fill ${vp.completed ? 'progress-fill-green' : ''}`}
-                          style={{ width: `${vp.percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-              </div>
-            </div>
-          )}
-
-          {/* Certificate banner */}
-          {courseCompleted && (
-            <div
-              style={{
-                padding: '20px 24px',
-                borderRadius: 16,
-                background: 'linear-gradient(135deg,#F0FDF4,#DCFCE7)',
-                border: '1px solid #BBF7D0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: 16,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <span style={{ fontSize: 36 }}>🏆</span>
-                <div>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: '#15803D', marginBottom: 2 }}>
-                    ยินดีด้วย! คุณเรียนจบคอร์สนี้แล้ว
-                  </p>
-                  <p style={{ fontSize: 13, color: '#16A34A' }}>ดาวน์โหลดใบประกาศนียบัตรได้เลย</p>
-                </div>
-              </div>
-              <a
-                href={certificateService.downloadUrl(course.id)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-secondary"
-                style={{ color: '#16A34A', borderColor: '#86EFAC', background: '#F0FDF4' }}
-              >
-                ⬇️ ดาวน์โหลดใบประกาศ
-              </a>
-            </div>
-          )}
+    <>
+      <div className="anim-up">
+        {/* ─── Breadcrumb ─── */}
+        <div className="breadcrumb">
+          <Link to="/courses" className="breadcrumb-link">
+            คอร์สเรียน
+          </Link>
+          <span className="breadcrumb-sep">›</span>
+          <span className="breadcrumb-current">{course.title}</span>
         </div>
 
-        {/* Playlist sidebar */}
-        <div className="card" style={{ padding: 16 }} data-testid="video-list">
-          <h3
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              marginBottom: 12,
-              padding: '0 4px',
-            }}
-          >
-            📋 รายการวิดีโอ ({totalVideos})
-          </h3>
+        {/* ─── Course header ─── */}
+        <div className="card" style={{ padding: '20px 24px', marginBottom: 20 }}>
           <div
             style={{
               display: 'flex',
-              flexDirection: 'column',
-              gap: 6,
-              maxHeight: 520,
-              overflowY: 'auto',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 16,
             }}
           >
-            {course.videos.map((video, idx) => {
-              const vp = getVP(video.id);
-              const isActive = selectedVideo?.id === video.id;
-              return (
-                <button
-                  key={video.id}
-                  onClick={() => setSelectedVideo(video)}
-                  className={`playlist-item ${isActive ? 'active' : ''}`}
-                  data-testid="video-item"
+            <div style={{ flex: 1 }}>
+              <div style={{ marginBottom: 6 }}>
+                <span className="badge badge-purple">{course.category ?? 'ทั่วไป'}</span>
+              </div>
+              <h1
+                style={{
+                  fontSize: 20,
+                  fontWeight: 800,
+                  color: 'var(--text-primary)',
+                  marginBottom: 8,
+                }}
+              >
+                {course.title}
+              </h1>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16,
+                  fontSize: 13,
+                  color: 'var(--text-muted)',
+                }}
+              >
+                <span>🎬 {totalVideos} วิดีโอ</span>
+                <span>✅ เรียนจบ {completedCount} บท</span>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <div
+                style={{
+                  fontSize: 28,
+                  fontWeight: 800,
+                  background: 'linear-gradient(135deg,#7B68EE,#9B8FFF)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  lineHeight: 1,
+                }}
+              >
+                {overallPercent}%
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                ความคืบหน้า
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: 14 }}>
+            <div className="progress-track">
+              <div
+                className={`progress-fill ${courseCompleted ? 'progress-fill-green' : ''}`}
+                style={{ width: `${overallPercent}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ─── Two-column layout ─── */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 320px',
+            gap: 20,
+            alignItems: 'start',
+          }}
+        >
+          {/* Video + info */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {selectedVideo && (
+              <div className="card" style={{ overflow: 'hidden' }}>
+                <div
+                  data-testid="video-player"
+                  style={{ background: '#000', borderRadius: '16px 16px 0 0', overflow: 'hidden' }}
                 >
-                  <div
-                    className="playlist-num"
-                    style={
-                      vp?.completed
-                        ? { background: '#DCFCE7', color: '#16A34A' }
-                        : isActive
-                          ? { background: 'var(--primary-light)', color: 'var(--primary)' }
-                          : {
-                              background: 'var(--bg)',
-                              color: 'var(--text-muted)',
-                              border: '1px solid var(--border)',
-                            }
-                    }
+                  <VideoPlayer
+                    videoId={selectedVideo.id}
+                    courseId={course.id}
+                    url={selectedVideo.url}
+                    onProgress={handleProgress}
+                  />
+                </div>
+                <div style={{ padding: '16px 20px' }}>
+                  <h2
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: 'var(--text-primary)',
+                      marginBottom: 4,
+                    }}
                   >
-                    {vp?.completed ? '✓' : idx + 1}
+                    {selectedVideo.title}
+                  </h2>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                    ⏱️ {Math.floor(selectedVideo.duration / 60)} นาที {selectedVideo.duration % 60}{' '}
+                    วินาที
+                  </p>
+                  {/* Progress bar for current video */}
+                  {(() => {
+                    const vp = getVP(selectedVideo.id);
+                    const percent = vp?.percent ?? 0;
+                    return (
+                      <div style={{ marginTop: 10 }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            fontSize: 11,
+                            color: 'var(--text-muted)',
+                            marginBottom: 4,
+                          }}
+                        >
+                          <span>ความคืบหน้าวิดีโอนี้</span>
+                          <span>{Math.round(percent)}%</span>
+                        </div>
+                        <div className="progress-track" data-testid="progress-bar">
+                          <div
+                            className={`progress-fill ${vp?.completed ? 'progress-fill-green' : ''}`}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* Certificate banner */}
+            {courseCompleted && !quizPassed && (
+              <div
+                style={{
+                  padding: '20px 24px',
+                  borderRadius: 16,
+                  background: 'linear-gradient(135deg,#FFF7ED,#FED7AA)',
+                  border: '1px solid #FDBA74',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 16,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <span style={{ fontSize: 36 }}>📝</span>
+                  <div>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: '#C2410C', marginBottom: 2 }}>
+                      ยินดีด้วย! เรียนจบแล้ว — ทำแบบทดสอบเพื่อรับใบประกาศ
+                    </p>
+                    <p style={{ fontSize: 13, color: '#EA580C' }}>ต้องผ่านเกณฑ์ 60% ขึ้นไป</p>
                   </div>
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div
+                </div>
+                <button
+                  onClick={() => setShowQuiz(true)}
+                  className="btn-primary"
+                  data-testid="quiz-button"
+                >
+                  ✏️ ทำแบบทดสอบ
+                </button>
+              </div>
+            )}
+
+            {courseCompleted && quizPassed && (
+              <div
+                style={{
+                  padding: '20px 24px',
+                  borderRadius: 16,
+                  background: 'linear-gradient(135deg,#F0FDF4,#DCFCE7)',
+                  border: '1px solid #BBF7D0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 16,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <span style={{ fontSize: 36 }}>🏆</span>
+                  <div>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: '#15803D', marginBottom: 2 }}>
+                      ยินดีด้วย! คุณผ่านแบบทดสอบแล้ว
+                    </p>
+                    <p style={{ fontSize: 13, color: '#16A34A' }}>ดาวน์โหลดใบประกาศนียบัตรได้เลย</p>
+                  </div>
+                </div>
+                <a
+                  href={certificateService.downloadUrl(course.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary"
+                  data-testid="certificate-button"
+                  style={{ color: '#16A34A', borderColor: '#86EFAC', background: '#F0FDF4' }}
+                >
+                  ⬇️ ดาวน์โหลดใบประกาศ
+                </a>
+              </div>
+            )}
+
+            {/* Documents section */}
+            {course.documents && course.documents.length > 0 && (
+              <div className="card" style={{ padding: '16px 20px' }}>
+                <h3
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                    marginBottom: 12,
+                  }}
+                >
+                  📄 เอกสารประกอบการเรียน
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {course.documents.map((doc) => (
+                    <a
+                      key={doc.id}
+                      href={doc.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       style={{
-                        fontSize: 13,
-                        fontWeight: isActive ? 700 : 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg)',
                         color: 'var(--text-primary)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        textDecoration: 'none',
+                        transition: 'all 0.15s',
                       }}
                     >
-                      {video.title}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                      {Math.floor(video.duration / 60)} นาที
-                    </div>
-                  </div>
-                  {vp?.completed && (
-                    <span
-                      style={{ fontSize: 11, color: '#16A34A', fontWeight: 700, flexShrink: 0 }}
+                      <span style={{ fontSize: 18 }}>📎</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{doc.title}</span>
+                      <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600 }}>
+                        ดาวน์โหลด ↗
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Playlist sidebar */}
+          <div className="card" style={{ padding: 16 }} data-testid="video-list">
+            <h3
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                marginBottom: 12,
+                padding: '0 4px',
+              }}
+            >
+              📋 รายการวิดีโอ ({totalVideos})
+            </h3>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+                maxHeight: 520,
+                overflowY: 'auto',
+              }}
+            >
+              {course.videos.map((video, idx) => {
+                const vp = getVP(video.id);
+                const isActive = selectedVideo?.id === video.id;
+                return (
+                  <button
+                    key={video.id}
+                    onClick={() => setSelectedVideo(video)}
+                    className={`playlist-item ${isActive ? 'active' : ''}`}
+                    data-testid="video-item"
+                  >
+                    <div
+                      className="playlist-num"
+                      style={
+                        vp?.completed
+                          ? { background: '#DCFCE7', color: '#16A34A' }
+                          : isActive
+                            ? { background: 'var(--primary-light)', color: 'var(--primary)' }
+                            : {
+                                background: 'var(--bg)',
+                                color: 'var(--text-muted)',
+                                border: '1px solid var(--border)',
+                              }
+                      }
                     >
-                      ✓
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+                      {vp?.completed ? '✓' : idx + 1}
+                    </div>
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: isActive ? 700 : 500,
+                          color: 'var(--text-primary)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {video.title}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {Math.floor(video.duration / 60)} นาที
+                      </div>
+                    </div>
+                    {vp?.completed && (
+                      <span
+                        style={{ fontSize: 11, color: '#16A34A', fontWeight: 700, flexShrink: 0 }}
+                      >
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {showQuiz && id && (
+        <QuizModal
+          courseId={id}
+          onClose={() => setShowQuiz(false)}
+          onPassed={() => {
+            setQuizPassed(true);
+            setShowQuiz(false);
+          }}
+        />
+      )}
+    </>
   );
 }

@@ -1,4 +1,4 @@
-# CLAUDE.md — BGS E-Learning Platform
+﻿# CLAUDE.md — BGS E-Learning Platform
 
 ## Project Overview
 

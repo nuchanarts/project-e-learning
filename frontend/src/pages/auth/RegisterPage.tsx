@@ -5,16 +5,34 @@ import { useAuth } from '../../contexts/AuthContext';
 export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    cid: '',
+    hospital: '',
+    position: '',
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (form.cid && !/^\d{13}$/.test(form.cid)) {
+      setError('เลขบัตรประชาชนต้องมี 13 หลัก');
+      return;
+    }
     setLoading(true);
     try {
-      await register(form.email, form.password, form.name);
+      await register(
+        form.email,
+        form.password,
+        form.name,
+        form.cid || undefined,
+        form.hospital || undefined,
+        form.position || undefined,
+      );
       navigate('/dashboard');
     } catch {
       setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
@@ -129,6 +147,53 @@ export default function RegisterPage() {
                 required
                 minLength={6}
                 autoComplete="new-password"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="cid">
+                เลขบัตรประชาชน (ไม่บังคับ)
+              </label>
+              <input
+                id="cid"
+                name="cid"
+                type="text"
+                className="form-input"
+                placeholder="13 หลัก"
+                value={form.cid}
+                onChange={(e) => setForm((p) => ({ ...p, cid: e.target.value }))}
+                maxLength={13}
+                inputMode="numeric"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="hospital">
+                สถานพยาบาล (ไม่บังคับ)
+              </label>
+              <input
+                id="hospital"
+                name="hospital"
+                type="text"
+                className="form-input"
+                placeholder="เช่น รพ.สต.บ้านใหม่"
+                value={form.hospital}
+                onChange={(e) => setForm((p) => ({ ...p, hospital: e.target.value }))}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="position">
+                ตำแหน่ง (ไม่บังคับ)
+              </label>
+              <input
+                id="position"
+                name="position"
+                type="text"
+                className="form-input"
+                placeholder="เช่น นักวิชาการสาธารณสุข"
+                value={form.position}
+                onChange={(e) => setForm((p) => ({ ...p, position: e.target.value }))}
               />
             </div>
 

@@ -7,32 +7,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+enum CertTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
 model User {
   id           String        @id @default(uuid()) @db.VarChar(36)
   email        String        @unique @db.VarChar(191)
   passwordHash String        @db.VarChar(255)
   name         String        @db.VarChar(255)
   role         Role          @default(USER)
+  cid          String?       @unique @db.VarChar(13)
+  hospital     String?       @db.VarChar(255)
+  position     String?       @db.VarChar(255)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   progress     Progress[]
   certificates Certificate[]
-}
-
-enum Role {
-  USER
-  ADMIN
+  quizAttempts QuizAttempt[]
 }
 
 model Course {
-  id           String        @id @default(uuid()) @db.VarChar(36)
-  title        String        @db.VarChar(255)
-  description  String        @db.Text
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  videos       Video[]
-  certificates Certificate[]
+  id            String          @id @default(uuid()) @db.VarChar(36)
+  title         String          @db.VarChar(255)
+  description   String          @db.Text
+  category      String?         @db.VarChar(100)
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  videos        Video[]
+  certificates  Certificate[]
+  documents     CourseDocument[]
+  quizQuestions QuizQuestion[]
+  quizAttempts  QuizAttempt[]
 }
 
 model Video {
@@ -50,28 +65,69 @@ model Video {
 }
 
 model Progress {
-  id        String   @id @default(uuid()) @db.VarChar(36)
-  userId    String   @db.VarChar(36)
-  videoId   String   @db.VarChar(36)
-  courseId  String   @db.VarChar(36)
-  percent   Float    @default(0)
-  completed Boolean  @default(false)
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid()) @db.VarChar(36)
+  userId         String   @db.VarChar(36)
+  videoId        String   @db.VarChar(36)
+  courseId       String   @db.VarChar(36)
+  percent        Float    @default(0)
+  completed      Boolean  @default(false)
+  watchedSeconds Int      @default(0)
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video          Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@unique([userId, videoId])
   @@index([userId, courseId])
 }
 
 model Certificate {
-  id       String   @id @default(uuid()) @db.VarChar(36)
-  userId   String   @db.VarChar(36)
-  courseId String   @db.VarChar(36)
-  filePath String   @db.VarChar(512)
-  issuedAt DateTime @default(now())
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid()) @db.VarChar(36)
+  userId    String    @db.VarChar(36)
+  courseId  String    @db.VarChar(36)
+  filePath  String    @db.VarChar(512)
+  tier      CertTier?
+  quizScore Float?
+  issuedAt  DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+model CourseDocument {
+  id       String @id @default(uuid()) @db.VarChar(36)
+  courseId String @db.VarChar(36)
+  title    String @db.VarChar(255)
+  url      String @db.VarChar(512)
+  order    Int    @default(0)
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, order])
+}
+
+model QuizQuestion {
+  id           String @id @default(uuid()) @db.VarChar(36)
+  courseId     String @db.VarChar(36)
+  text         String @db.Text
+  options      String @db.Text
+  correctIndex Int
+  order        Int    @default(0)
+  course       Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, order])
+}
+
+model QuizAttempt {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  userId      String   @db.VarChar(36)
+  courseId    String   @db.VarChar(36)
+  score       Float
+  passed      Boolean
+  answers     String @db.Text
+  attemptedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
 }

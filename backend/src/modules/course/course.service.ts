@@ -1,8 +1,8 @@
 import { courseRepository } from './course.repository';
 
 export const courseService = {
-  async list() {
-    return courseRepository.findAll();
+  async list(category?: string) {
+    return courseRepository.findAll(category);
   },
 
   async getById(id: string) {

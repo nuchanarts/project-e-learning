@@ -1,21 +1,19 @@
 import { PrismaClient } from '@prisma/client';
 
-// BMS/HOSxP MySQL uses TIS-620 — fix by altering session charset via queryRaw
-// We run SET NAMES inside a transaction so both use the same connection
-const client = new PrismaClient();
+// Prisma's Quaint (Rust) connector does not honour charset=utf8mb4 in the URL
+// on every connection in the pool. Run SET NAMES utf8mb4 before each model
+// operation to guarantee Thai characters (utf8mb4) are returned correctly.
+const prismaBase = new PrismaClient();
 
-const prisma = client.$extends({
+const prisma = prismaBase.$extends({
   query: {
-    async $allOperations({ args, query }) {
-      // Run SET NAMES + actual query in same transaction (same connection)
-      let result: unknown;
-      await client.$transaction(async (tx) => {
-        await tx.$executeRawUnsafe('SET NAMES utf8mb4');
-        result = await query(args);
-      });
-      return result;
+    $allModels: {
+      async $allOperations({ args, query }) {
+        await prismaBase.$executeRawUnsafe('SET NAMES utf8mb4');
+        return query(args);
+      },
     },
   },
 });
 
-export default prisma as unknown as PrismaClient;
+export default prisma;

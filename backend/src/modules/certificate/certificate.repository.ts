@@ -13,7 +13,21 @@ export const certificateRepository = {
     });
   },
 
-  async create(userId: string, courseId: string, filePath: string) {
-    return prisma.certificate.create({ data: { userId, courseId, filePath } });
+  async create(
+    userId: string,
+    courseId: string,
+    filePath: string,
+    tier?: string | null,
+    quizScore?: number | null,
+  ) {
+    return prisma.certificate.create({
+      data: {
+        userId,
+        courseId,
+        filePath,
+        tier: (tier as any) ?? undefined,
+        quizScore: quizScore ?? undefined,
+      },
+    });
   },
 };

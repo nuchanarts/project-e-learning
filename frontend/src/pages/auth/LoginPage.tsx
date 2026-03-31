@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
+const REMEMBER_KEY = 'bgs_remember_email';
+
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem(REMEMBER_KEY) ?? '');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem(REMEMBER_KEY));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -15,6 +18,11 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_KEY, email);
+      } else {
+        localStorage.removeItem(REMEMBER_KEY);
+      }
       await login(email, password);
       navigate('/dashboard');
     } catch {
@@ -117,6 +125,25 @@ export default function LoginPage() {
                 autoComplete="current-password"
               />
             </div>
+
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                cursor: 'pointer',
+                fontSize: 13,
+                color: 'var(--text-muted)',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--primary)' }}
+              />
+              จดจำอีเมลของฉัน
+            </label>
 
             <button
               type="submit"

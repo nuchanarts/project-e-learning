@@ -4,7 +4,13 @@ import { courseRepository } from '../course/course.repository';
 const COMPLETION_THRESHOLD = 80;
 
 export const progressService = {
-  async saveProgress(userId: string, videoId: string, courseId: string, percent: number) {
+  async saveProgress(
+    userId: string,
+    videoId: string,
+    courseId: string,
+    percent: number,
+    watchedSeconds?: number,
+  ) {
     const completed = percent >= COMPLETION_THRESHOLD;
 
     const progress = await progressRepository.upsert({
@@ -13,6 +19,7 @@ export const progressService = {
       courseId,
       percent,
       completed,
+      watchedSeconds,
     });
 
     let courseCompleted = false;

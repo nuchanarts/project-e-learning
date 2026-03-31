@@ -2,11 +2,21 @@ import { certificateService } from '../certificate.service';
 import { certificateRepository } from '../certificate.repository';
 import { progressRepository } from '../../progress/progress.repository';
 import { courseRepository } from '../../course/course.repository';
+import { quizService } from '../../quiz/quiz.service';
 import fs from 'fs';
 
 jest.mock('../certificate.repository');
 jest.mock('../../progress/progress.repository');
 jest.mock('../../course/course.repository');
+jest.mock('../../quiz/quiz.service');
+jest.mock('../../../lib/prisma', () => ({
+  __esModule: true,
+  default: {
+    certificate: { count: jest.fn().mockResolvedValue(0) },
+    course: { count: jest.fn().mockResolvedValue(5) },
+    quizAttempt: { findUnique: jest.fn().mockResolvedValue({ score: 80 }) },
+  },
+}));
 
 const mockCourse = {
   id: 'c1',
@@ -55,16 +65,29 @@ describe('certificateService.getOrGenerate', () => {
     (certificateRepository.findByUserAndCourse as jest.Mock).mockResolvedValue(null);
     (courseRepository.findById as jest.Mock).mockResolvedValue(mockCourse);
     (progressRepository.countCompletedVideos as jest.Mock).mockResolvedValue(1);
+    (quizService.isQuizPassed as jest.Mock).mockResolvedValue(true);
 
     await expect(certificateService.getOrGenerate('u1', 'c1')).rejects.toMatchObject({
       status: 403,
     });
   });
 
-  it('should generate and return new certificate when all videos completed', async () => {
+  it('should throw 403 if quiz not passed', async () => {
     (certificateRepository.findByUserAndCourse as jest.Mock).mockResolvedValue(null);
     (courseRepository.findById as jest.Mock).mockResolvedValue(mockCourse);
     (progressRepository.countCompletedVideos as jest.Mock).mockResolvedValue(2);
+    (quizService.isQuizPassed as jest.Mock).mockResolvedValue(false);
+
+    await expect(certificateService.getOrGenerate('u1', 'c1')).rejects.toMatchObject({
+      status: 403,
+    });
+  });
+
+  it('should generate and return new certificate when all videos completed and quiz passed', async () => {
+    (certificateRepository.findByUserAndCourse as jest.Mock).mockResolvedValue(null);
+    (courseRepository.findById as jest.Mock).mockResolvedValue(mockCourse);
+    (progressRepository.countCompletedVideos as jest.Mock).mockResolvedValue(2);
+    (quizService.isQuizPassed as jest.Mock).mockResolvedValue(true);
     (certificateRepository.create as jest.Mock).mockResolvedValue(mockCert);
 
     const result = await certificateService.getOrGenerate('u1', 'c1');
@@ -72,6 +95,8 @@ describe('certificateService.getOrGenerate', () => {
       'u1',
       'c1',
       expect.stringContaining('cert_u1_c1'),
+      null,
+      80,
     );
     expect(result).toEqual(mockCert);
   });
@@ -81,6 +106,7 @@ describe('certificateService.getOrGenerate', () => {
     (certificateRepository.findByUserAndCourse as jest.Mock).mockResolvedValue(null);
     (courseRepository.findById as jest.Mock).mockResolvedValue(mockCourse);
     (progressRepository.countCompletedVideos as jest.Mock).mockResolvedValue(2);
+    (quizService.isQuizPassed as jest.Mock).mockResolvedValue(true);
     (certificateRepository.create as jest.Mock).mockResolvedValue(mockCert);
 
     await certificateService.getOrGenerate('u1', 'c1');

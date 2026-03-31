@@ -3,14 +3,14 @@ import { test, expect } from '@playwright/test';
 test.describe('Certificate Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
-    await page.fill('[name="email"]', 'test@example.com');
-    await page.fill('[name="password"]', 'password123');
+    await page.fill('[name="email"]', 'user@bgs.local');
+    await page.fill('[name="password"]', 'user1234');
     await page.click('[type="submit"]');
+    await expect(page).toHaveURL('/dashboard');
   });
 
   test('should show certificate button for completed courses', async ({ page }) => {
     await page.goto('/courses');
-    // Navigate to a completed course
     const completedCourse = page.locator('[data-testid="course-card"][data-completed="true"]');
     if (await completedCourse.count() > 0) {
       await completedCourse.first().click();

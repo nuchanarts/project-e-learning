@@ -7,6 +7,8 @@ interface DashboardData {
   totalCourses: number;
   completedCourses: number;
   inProgressCourses: number;
+  totalLearningSeconds: number;
+  tier: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | null;
   courses: Array<{
     id: string;
     title: string;
@@ -16,6 +18,13 @@ interface DashboardData {
     completedVideos: number;
   }>;
 }
+
+const TIER_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
+  BRONZE: { label: 'Bronze', icon: '🥉', color: '#CD7F32' },
+  SILVER: { label: 'Silver', icon: '🥈', color: '#A8A9AD' },
+  GOLD: { label: 'Gold', icon: '🥇', color: '#FFD700' },
+  PLATINUM: { label: 'Platinum', icon: '💎', color: '#E5E4E2' },
+};
 
 const THUMBS = [
   'linear-gradient(135deg,#7B68EE,#9B8FFF)',
@@ -50,6 +59,10 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  const totalHours = data ? Math.floor((data.totalLearningSeconds ?? 0) / 3600) : 0;
+  const totalMins = data ? Math.floor(((data.totalLearningSeconds ?? 0) % 3600) / 60) : 0;
+  const tier = data?.tier ? TIER_CONFIG[data.tier] : null;
 
   const stats = [
     {
@@ -96,6 +109,43 @@ export default function DashboardPage() {
                 {user?.role === 'ADMIN' ? 'ผู้ดูแลระบบ' : 'เจ้าหน้าที่ รพ.สต.'} —
                 มาเรียนรู้ต่อกันเลย!
               </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
+                {(data?.totalLearningSeconds ?? 0) > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      background: 'rgba(255,255,255,0.15)',
+                      borderRadius: 20,
+                      padding: '4px 12px',
+                    }}
+                  >
+                    <span style={{ fontSize: 14 }}>⏱️</span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
+                      {totalHours > 0 ? `${totalHours} ชม. ` : ''}
+                      {totalMins} นาที
+                    </span>
+                  </div>
+                )}
+                {tier && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      background: 'rgba(255,255,255,0.15)',
+                      borderRadius: 20,
+                      padding: '4px 12px',
+                    }}
+                  >
+                    <span style={{ fontSize: 14 }}>{tier.icon}</span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.9)', fontWeight: 700 }}>
+                      {tier.label}
+                    </span>
+                  </div>
+                )}
+              </div>
               <Link to="/courses" className="hero-btn">
                 🎓 ดูคอร์สทั้งหมด
               </Link>
@@ -216,7 +266,12 @@ export default function DashboardPage() {
           }}
         >
           {data.courses.map((course, i) => (
-            <Link key={course.id} to={`/courses/${course.id}`} className="course-card">
+            <Link
+              key={course.id}
+              to={`/courses/${course.id}`}
+              className="course-card"
+              data-testid="course-progress"
+            >
               <div className="course-thumb" style={{ background: THUMBS[i % THUMBS.length] }}>
                 <span className="course-thumb-icon" style={{ fontSize: 44 }}>
                   {ICONS[i % ICONS.length]}
@@ -229,7 +284,9 @@ export default function DashboardPage() {
                     ✅ {course.completedVideos}/{course.totalVideos} บท
                   </span>
                   {course.isCompleted ? (
-                    <span className="badge badge-green">จบแล้ว</span>
+                    <span className="badge badge-green" data-testid="completed-badge">
+                      จบแล้ว
+                    </span>
                   ) : (
                     <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--primary)' }}>
                       {course.progressPercent}%

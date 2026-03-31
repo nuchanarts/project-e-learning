@@ -4,10 +4,12 @@ import { authService } from './auth.service';
 export const authController = {
   async register(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email, password, name } = req.body;
-      const result = await authService.register(email, password, name);
+      const { email, password, name, cid, hospital, position } = req.body;
+      const result = await authService.register(email, password, name, cid, hospital, position);
       res.status(201).json(result);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   async login(req: Request, res: Response, next: NextFunction) {
@@ -15,7 +17,9 @@ export const authController = {
       const { email, password } = req.body;
       const result = await authService.login(email, password);
       res.json(result);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   async refresh(req: Request, res: Response, next: NextFunction) {
@@ -23,7 +27,9 @@ export const authController = {
       const { refreshToken } = req.body;
       const tokens = await authService.refresh(refreshToken);
       res.json(tokens);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   },
 
   logout(_req: Request, res: Response) {

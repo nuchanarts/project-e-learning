@@ -1,11 +1,26 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import api from '../lib/api';
 
-interface User { id: string; email: string; name: string; role: string; }
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  cid?: string | null;
+  hospital?: string | null;
+  position?: string | null;
+}
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    name: string,
+    cid?: string,
+    hospital?: string,
+    position?: string,
+  ) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -30,8 +45,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
-  const register = async (email: string, password: string, name: string) => {
-    const { data } = await api.post('/auth/register', { email, password, name });
+  const register = async (
+    email: string,
+    password: string,
+    name: string,
+    cid?: string,
+    hospital?: string,
+    position?: string,
+  ) => {
+    const { data } = await api.post('/auth/register', {
+      email,
+      password,
+      name,
+      cid,
+      hospital,
+      position,
+    });
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('user', JSON.stringify(data.user));
     setUser(data.user);

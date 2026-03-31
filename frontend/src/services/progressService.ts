@@ -8,7 +8,7 @@ export interface ProgressRecord {
 }
 
 export const progressService = {
-  save: (data: { videoId: string; courseId: string; percent: number }) =>
+  save: (data: { videoId: string; courseId: string; percent: number; watchedSeconds?: number }) =>
     api.post('/progress', data).then((r) => r.data),
 
   getForCourse: (courseId: string) =>

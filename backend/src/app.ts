@@ -8,6 +8,7 @@ import progressRoutes from './modules/progress/progress.routes';
 import certificateRoutes from './modules/certificate/certificate.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import adminRoutes from './modules/admin/admin.routes';
+import quizRoutes from './modules/quiz/quiz.routes';
 import { errorHandler } from './middleware/error.middleware';
 
 const app = express();
@@ -23,10 +24,11 @@ app.use('/progress', progressRoutes);
 app.use('/certificates', certificateRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/admin', adminRoutes);
+app.use('/quiz', quizRoutes);
 
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8888;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
