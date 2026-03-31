@@ -361,7 +361,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <img src="/logos/bms-icon.png" alt="BMS" className="site-footer-logo-img" />
           </div>
           <div className="site-footer-copy">
-            © {new Date().getFullYear()} Bangkok Global Software (BGS) · พัฒนาโดย BMS ·
+            © {new Date().getFullYear()} Bangkok Global Software (BGS) · พัฒนาโดย BMS Group ·
             สงวนลิขสิทธิ์
           </div>
         </div>
