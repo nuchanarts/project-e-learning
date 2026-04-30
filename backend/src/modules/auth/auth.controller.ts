@@ -96,6 +96,26 @@ export const authController = {
     }
   },
 
+  async forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      await authService.forgotPassword(email);
+      res.json({ ok: true, message: 'หากอีเมลนี้มีในระบบ รหัส OTP จะถูกส่งไปให้' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, otp, newPassword } = req.body;
+      await authService.resetPassword(email, otp, newPassword);
+      res.json({ ok: true, message: 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   logout(_req: Request, res: Response) {
     res.json({ message: 'Logged out successfully' });
   },

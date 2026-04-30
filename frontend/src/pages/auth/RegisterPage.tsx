@@ -138,8 +138,20 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (form.cid && !/^\d{13}$/.test(form.cid)) {
-      setError(t.register_error_cid);
+    if (!/^\d{13}$/.test(form.cid)) {
+      setError(t.register_error_cid || 'เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก');
+      return;
+    }
+    if (!/^\d{5}$/.test(form.hospcode)) {
+      setError('กรุณาระบุรหัสสถานพยาบาล 5 หลักให้ถูกต้อง');
+      return;
+    }
+    if (!form.hospital.trim()) {
+      setError('กรุณาระบุชื่อสถานพยาบาล');
+      return;
+    }
+    if (!form.position.trim()) {
+      setError('กรุณาระบุตำแหน่งงาน');
       return;
     }
     setLoading(true);
@@ -148,10 +160,10 @@ export default function RegisterPage() {
         form.email,
         form.password,
         form.name,
-        form.cid || undefined,
-        form.hospital || undefined,
-        form.position || undefined,
-        form.hospcode || undefined,
+        form.cid,
+        form.hospital,
+        form.position,
+        form.hospcode,
       );
       navigate('/dashboard');
     } catch {
@@ -298,7 +310,7 @@ export default function RegisterPage() {
 
             <div className="form-group">
               <label className="form-label" htmlFor="cid">
-                เลขบัตรประชาชน (ไม่บังคับ)
+                เลขบัตรประชาชน <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
                 id="cid"
@@ -307,16 +319,19 @@ export default function RegisterPage() {
                 className="form-input"
                 placeholder="13 หลัก"
                 value={form.cid}
-                onChange={(e) => setForm((p) => ({ ...p, cid: e.target.value }))}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, cid: e.target.value.replace(/\D/g, '').slice(0, 13) }))
+                }
                 maxLength={13}
                 inputMode="numeric"
+                required
               />
             </div>
 
             {/* ── Hospital: 2 separate fields ── */}
             <div className="form-group">
               <label className="form-label" htmlFor="hospcode">
-                รหัสสถานพยาบาล 5 หลัก (ไม่บังคับ)
+                รหัสสถานพยาบาล 5 หลัก
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -359,7 +374,7 @@ export default function RegisterPage() {
 
             <div className="form-group" ref={hospitalRef} style={{ position: 'relative' }}>
               <label className="form-label" htmlFor="hospital">
-                ชื่อสถานพยาบาล (ไม่บังคับ)
+                ชื่อสถานพยาบาล
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -435,7 +450,7 @@ export default function RegisterPage() {
             {/* Position combobox */}
             <div className="form-group">
               <label className="form-label" htmlFor="position">
-                ตำแหน่ง (ไม่บังคับ)
+                ตำแหน่ง
               </label>
               <input
                 id="position"
@@ -447,6 +462,7 @@ export default function RegisterPage() {
                 value={form.position}
                 onChange={(e) => setForm((p) => ({ ...p, position: e.target.value }))}
                 autoComplete="off"
+                required
               />
               <datalist id="positions-list">
                 {POSITION_SUGGESTIONS.map((p) => (

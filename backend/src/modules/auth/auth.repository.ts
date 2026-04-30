@@ -27,4 +27,7 @@ export const authRepository = {
   async findByHospcodeAndCid(hospcode: string, cid: string) {
     return prisma.user.findMany({ where: { hospcode, cid } });
   },
+  async updatePasswordByEmail(email: string, passwordHash: string) {
+    return prisma.user.update({ where: { email }, data: { passwordHash } });
+  },
 };

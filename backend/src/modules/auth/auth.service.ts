@@ -45,20 +45,26 @@ export const authService = {
     email: string,
     password: string,
     name: string,
-    cid?: string,
-    hospital?: string,
-    position?: string,
-    hospcode?: string,
+    cid: string,
+    hospital: string,
+    position: string,
+    hospcode: string,
   ) {
     const existing = await authRepository.findByEmail(email);
     if (existing) throw Object.assign(new Error('Email already registered'), { status: 409 });
 
-    if (cid) {
-      if (!/^\d{13}$/.test(cid))
-        throw Object.assign(new Error('CID must be exactly 13 digits'), { status: 400 });
-      const cidExists = await authRepository.findByCid(cid);
-      if (cidExists) throw Object.assign(new Error('CID already registered'), { status: 409 });
-    }
+    if (!cid) throw Object.assign(new Error('เลขบัตรประชาชนจำเป็นต้องระบุ'), { status: 400 });
+    if (!/^\d{13}$/.test(cid))
+      throw Object.assign(new Error('เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก'), { status: 400 });
+    const cidExists = await authRepository.findByCid(cid);
+    if (cidExists)
+      throw Object.assign(new Error('เลขบัตรประชาชนนี้ถูกใช้งานแล้ว'), { status: 409 });
+
+    if (!hospcode || !/^\d{5}$/.test(hospcode))
+      throw Object.assign(new Error('รหัสสถานพยาบาลต้องเป็นตัวเลข 5 หลัก'), { status: 400 });
+    if (!hospital?.trim())
+      throw Object.assign(new Error('กรุณาระบุชื่อสถานพยาบาล'), { status: 400 });
+    if (!position?.trim()) throw Object.assign(new Error('กรุณาระบุตำแหน่งงาน'), { status: 400 });
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     const user = await authRepository.create({
@@ -132,6 +138,23 @@ export const authService = {
     if (!user.isActive) throw Object.assign(new Error('บัญชีถูกระงับการใช้งาน'), { status: 403 });
     const tokens = generateTokens(user.id, user.email, user.role);
     return { user: formatUser(user), ...tokens };
+  },
+
+  async forgotPassword(email: string) {
+    const user = await authRepository.findByEmail(email);
+    if (!user) return; // ไม่เปิดเผยว่าอีเมลมีอยู่หรือไม่
+    const { otpService } = await import('./otp.service');
+    await otpService.sendOtp(email);
+  },
+
+  async resetPassword(email: string, otp: string, newPassword: string) {
+    const { otpService } = await import('./otp.service');
+    const valid = await otpService.verifyOtp(email, otp);
+    if (!valid) throw Object.assign(new Error('รหัส OTP ไม่ถูกต้องหรือหมดอายุ'), { status: 400 });
+    if (newPassword.length < 6)
+      throw Object.assign(new Error('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'), { status: 400 });
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await authRepository.updatePasswordByEmail(email, passwordHash);
   },
 
   async refresh(refreshToken: string) {

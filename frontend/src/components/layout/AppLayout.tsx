@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme, THEMES } from '../../contexts/ThemeContext';
 
 // ── SVG Icons ──────────────────────────────────────────────
 const IconDashboard = () => (
@@ -140,6 +141,7 @@ const BREADCRUMB: Record<string, string> = {
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
+  const { themeId, setTheme } = useTheme();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -250,11 +252,47 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
         );
       })}
-      {/* ── Logout ── */}
+      {/* ── Theme Picker ── */}
       <div style={{ marginTop: 'auto', paddingTop: 16 }}>
+        <div
+          style={{
+            fontSize: 10,
+            color: 'rgba(255,255,255,0.45)',
+            textTransform: 'uppercase',
+            letterSpacing: 1,
+            marginBottom: 8,
+            paddingLeft: 4,
+          }}
+        >
+          ธีมสี
+        </div>
+        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', paddingLeft: 2 }}>
+          {THEMES.map((t) => (
+            <button
+              key={t.id}
+              title={t.label}
+              onClick={() => setTheme(t.id)}
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                background: t.primary,
+                border: themeId === t.id ? '2px solid #fff' : '2px solid transparent',
+                outline: themeId === t.id ? `2px solid ${t.primary}` : 'none',
+                cursor: 'pointer',
+                padding: 0,
+                transition: 'transform .15s',
+                transform: themeId === t.id ? 'scale(1.2)' : 'scale(1)',
+              }}
+            />
+          ))}
+        </div>
+
+        {/* ── Logout ── */}
         <button
           data-testid="logout-button"
           className="sb-logout"
+          style={{ marginTop: 12 }}
           onClick={() => {
             setMobileOpen(false);
             handleLogout();

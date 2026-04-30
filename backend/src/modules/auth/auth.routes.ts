@@ -5,6 +5,8 @@ import { authenticate, requireAdmin } from '../../middleware/auth.middleware';
 const router = Router();
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 router.post('/login-by-cid', authController.loginByCid);
 router.post('/otp/verify', authController.verifyOtp);
 router.post('/otp/resend', authController.resendOtp);

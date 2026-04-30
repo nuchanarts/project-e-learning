@@ -298,24 +298,34 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                cursor: 'pointer',
-                fontSize: 13,
-                color: 'var(--text-muted)',
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--primary)' }}
-              />
-              {t.login_remember}
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  color: 'var(--text-muted)',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{
+                    width: 15,
+                    height: 15,
+                    cursor: 'pointer',
+                    accentColor: 'var(--primary)',
+                  }}
+                />
+                {t.login_remember}
+              </label>
+              <Link to="/forgot-password" className="auth-link" style={{ fontSize: 13 }}>
+                ลืมรหัสผ่าน?
+              </Link>
+            </div>
 
             <button
               type="submit"
