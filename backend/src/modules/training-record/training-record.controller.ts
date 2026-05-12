@@ -6,39 +6,18 @@ export const trainingRecordController = {
   async create(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.id;
-      const {
-        courseId,
-        recordDate,
-        triageRed,
-        triageYellow,
-        triageGreen,
-        vitalSigns,
-        cc,
-        hpi,
-        procedures,
-        labOrders,
-        xrayOrders,
-        medications,
-        billing,
-        otherExpenses,
-        notes,
-      } = req.body;
+      const { courseId, recordDate, imageData, imageMimeType, notes } = req.body;
+
+      if (!imageData) {
+        res.status(400).json({ message: 'กรุณาแนบรูปภาพผลการปฏิบัติ' });
+        return;
+      }
 
       const record = await trainingRecordService.create(userId, {
         courseId: courseId || undefined,
         recordDate: recordDate ? new Date(recordDate) : new Date(),
-        triageRed: Number(triageRed ?? 0),
-        triageYellow: Number(triageYellow ?? 0),
-        triageGreen: Number(triageGreen ?? 0),
-        vitalSigns: Number(vitalSigns ?? 0),
-        cc: Number(cc ?? 0),
-        hpi: Number(hpi ?? 0),
-        procedures: Number(procedures ?? 0),
-        labOrders: Number(labOrders ?? 0),
-        xrayOrders: Number(xrayOrders ?? 0),
-        medications: Number(medications ?? 0),
-        billing: Number(billing ?? 0),
-        otherExpenses: Number(otherExpenses ?? 0),
+        imageData,
+        imageMimeType: imageMimeType || 'image/jpeg',
         notes: notes || undefined,
       });
       res.status(201).json(record);
@@ -50,7 +29,8 @@ export const trainingRecordController = {
   async getMyRecords(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const records = await trainingRecordService.getMyRecords(req.user!.id);
-      res.json(records);
+      // Strip imageData for list view to reduce payload
+      res.json(records.map(({ imageData: _, ...r }) => r));
     } catch (err) {
       next(err);
     }
@@ -69,24 +49,55 @@ export const trainingRecordController = {
     }
   },
 
-  async getByCourse(req: AuthRequest, res: Response, next: NextFunction) {
+  // Admin: list all records
+  async getAll(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const records = await trainingRecordService.getByCourse(req.params.courseId);
-      res.json(records);
+      const status = req.query.status as string | undefined;
+      const records = await trainingRecordService.getAllForAdmin(status);
+      // Strip imageData for list view
+      res.json(records.map(({ imageData: _, ...r }) => r));
     } catch (err) {
       next(err);
     }
   },
 
-  async update(req: AuthRequest, res: Response, next: NextFunction) {
+  // Admin: get one record with image
+  async getOneAdmin(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const record = await trainingRecordService.update(
+      const record = await trainingRecordService.getById(
         req.params.id,
         req.user!.id,
         req.user!.role,
-        req.body,
       );
       res.json(record);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // Admin: approve or reject
+  async review(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { status, adminNote } = req.body;
+      if (!['APPROVED', 'REJECTED'].includes(status)) {
+        res.status(400).json({ message: 'status must be APPROVED or REJECTED' });
+        return;
+      }
+      const record = await trainingRecordService.approveOrReject(
+        req.params.id,
+        status as 'APPROVED' | 'REJECTED',
+        adminNote,
+      );
+      res.json(record);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getByCourse(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const records = await trainingRecordService.getByCourse(req.params.courseId);
+      res.json(records.map(({ imageData: _, ...r }) => r));
     } catch (err) {
       next(err);
     }

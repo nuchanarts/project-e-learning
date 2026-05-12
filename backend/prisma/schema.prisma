@@ -256,38 +256,49 @@ model BundleCourse {
   @@id([bundleId, courseId])
 }
 
+enum TrainingRecordStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model TrainingRecord {
-  id            String    @id @default(uuid()) @db.VarChar(36)
-  userId        String    @db.VarChar(36)
-  courseId      String?   @db.VarChar(36)
+  id            String               @id @default(uuid()) @db.VarChar(36)
+  userId        String               @db.VarChar(36)
+  courseId      String?              @db.VarChar(36)
 
-  recordDate    DateTime  @default(now())
+  recordDate    DateTime             @default(now())
+  status        TrainingRecordStatus @default(PENDING)
+  adminNote     String?              @db.Text
 
-  // Triage counts
-  triageRed     Int       @default(0)
-  triageYellow  Int       @default(0)
-  triageGreen   Int       @default(0)
+  // Image evidence (base64 or URL)
+  imageData     String?              @db.LongText
+  imageMimeType String?              @db.VarChar(50)
 
-  // Clinical record counts
-  vitalSigns    Int       @default(0)
-  cc            Int       @default(0)
-  hpi           Int       @default(0)
-  procedures    Int       @default(0)
-  labOrders     Int       @default(0)
-  xrayOrders    Int       @default(0)
-  medications   Int       @default(0)
-  billing       Int       @default(0)
-  otherExpenses Int       @default(0)
+  // Optional count fields (kept for backward compat)
+  triageRed     Int                  @default(0)
+  triageYellow  Int                  @default(0)
+  triageGreen   Int                  @default(0)
+  vitalSigns    Int                  @default(0)
+  cc            Int                  @default(0)
+  hpi           Int                  @default(0)
+  procedures    Int                  @default(0)
+  labOrders     Int                  @default(0)
+  xrayOrders    Int                  @default(0)
+  medications   Int                  @default(0)
+  billing       Int                  @default(0)
+  otherExpenses Int                  @default(0)
 
-  notes         String?   @db.Text
+  notes         String?              @db.Text
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   course  Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([courseId])
+  @@index([status])
   @@index([recordDate])
 }

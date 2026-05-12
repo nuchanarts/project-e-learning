@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import api from '../../lib/api';
+import TrainingRecordReviewPage from './TrainingRecordReviewPage';
 
 interface Analytics {
   totalUsers: number;
@@ -138,7 +139,7 @@ interface SiteSettings {
   categories: string;
 }
 
-type AdminTab = 'courses' | 'users' | 'updates';
+type AdminTab = 'courses' | 'users' | 'training' | 'updates';
 
 interface HospItem {
   hospcode: string;
@@ -1072,6 +1073,7 @@ export default function AdminPage() {
           [
             ['courses', '📚 จัดการคอร์ส'],
             ['users', '👥 ทะเบียนผู้ใช้'],
+            ['training', '📋 ผลการปฏิบัติ'],
             ['updates', '📢 ประกาศ & อัปเดต'],
           ] as const
         ).map(([key, label]) => (

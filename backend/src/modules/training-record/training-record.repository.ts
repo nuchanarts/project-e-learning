@@ -4,29 +4,33 @@ export interface CreateTrainingRecordDto {
   userId: string;
   courseId?: string;
   recordDate: Date;
-  triageRed: number;
-  triageYellow: number;
-  triageGreen: number;
-  vitalSigns: number;
-  cc: number;
-  hpi: number;
-  procedures: number;
-  labOrders: number;
-  xrayOrders: number;
-  medications: number;
-  billing: number;
-  otherExpenses: number;
+  imageData?: string;
+  imageMimeType?: string;
   notes?: string;
+  triageRed?: number;
+  triageYellow?: number;
+  triageGreen?: number;
+  vitalSigns?: number;
+  cc?: number;
+  hpi?: number;
+  procedures?: number;
+  labOrders?: number;
+  xrayOrders?: number;
+  medications?: number;
+  billing?: number;
+  otherExpenses?: number;
 }
+
+const userSelect = {
+  select: { id: true, name: true, hospital: true, hospcode: true, position: true },
+};
+const courseSelect = { select: { id: true, title: true } };
 
 export const trainingRecordRepository = {
   async create(data: CreateTrainingRecordDto) {
     return prisma.trainingRecord.create({
-      data,
-      include: {
-        user: { select: { id: true, name: true, hospital: true, hospcode: true } },
-        course: { select: { id: true, title: true } },
-      },
+      data: { ...data, status: 'PENDING' },
+      include: { user: userSelect, course: courseSelect },
     });
   },
 
@@ -34,38 +38,46 @@ export const trainingRecordRepository = {
     return prisma.trainingRecord.findMany({
       where: { userId },
       orderBy: { recordDate: 'desc' },
-      include: { course: { select: { id: true, title: true } } },
+      include: { course: courseSelect },
     });
   },
 
   async findById(id: string) {
     return prisma.trainingRecord.findUnique({
       where: { id },
-      include: {
-        user: { select: { id: true, name: true, hospital: true, hospcode: true } },
-        course: { select: { id: true, title: true } },
-      },
+      include: { user: userSelect, course: courseSelect },
     });
   },
 
   async findByCourse(courseId: string) {
     return prisma.trainingRecord.findMany({
       where: { courseId },
-      orderBy: [{ recordDate: 'desc' }, { createdAt: 'desc' }],
-      include: {
-        user: { select: { id: true, name: true, hospital: true, hospcode: true, position: true } },
-        course: { select: { id: true, title: true } },
-      },
+      orderBy: [{ status: 'asc' }, { recordDate: 'desc' }],
+      include: { user: userSelect, course: courseSelect },
+    });
+  },
+
+  async findAllForAdmin(status?: string) {
+    return prisma.trainingRecord.findMany({
+      where: status ? { status: status as any } : undefined,
+      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+      include: { user: userSelect, course: courseSelect },
     });
   },
 
   async existsForUserAndCourse(userId: string, courseId: string) {
-    const count = await prisma.trainingRecord.count({ where: { userId, courseId } });
+    const count = await prisma.trainingRecord.count({
+      where: { userId, courseId, status: 'APPROVED' },
+    });
     return count > 0;
   },
 
-  async update(id: string, data: Partial<Omit<CreateTrainingRecordDto, 'userId'>>) {
-    return prisma.trainingRecord.update({ where: { id }, data });
+  async updateStatus(id: string, status: 'APPROVED' | 'REJECTED', adminNote?: string) {
+    return prisma.trainingRecord.update({
+      where: { id },
+      data: { status, adminNote },
+      include: { user: userSelect, course: courseSelect },
+    });
   },
 
   async delete(id: string) {

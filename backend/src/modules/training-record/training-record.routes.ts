@@ -3,16 +3,17 @@ import { authenticate, requireAdmin } from '../../middleware/auth.middleware';
 import { trainingRecordController } from './training-record.controller';
 
 const router = Router();
-
 router.use(authenticate);
 
+// User routes
 router.post('/', trainingRecordController.create);
 router.get('/my', trainingRecordController.getMyRecords);
 router.get('/:id', trainingRecordController.getById);
-router.put('/:id', trainingRecordController.update);
 router.delete('/:id', trainingRecordController.delete);
 
-// Admin: view all records for a course (for report)
+// Admin routes
+router.get('/', requireAdmin, trainingRecordController.getAll);
+router.put('/:id/review', requireAdmin, trainingRecordController.review);
 router.get('/course/:courseId', requireAdmin, trainingRecordController.getByCourse);
 
 export default router;
