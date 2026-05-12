@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import type { ReactNode } from 'react';
 
-const IS_DEMO = import.meta.env.GITHUB_PAGES === 'true';
+const IS_DEMO = import.meta.env.VITE_GITHUB_PAGES === 'true';
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
