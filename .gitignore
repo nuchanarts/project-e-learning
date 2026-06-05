@@ -1,6 +1,10 @@
 # Environment
 .env
 *.env.local
+# Production secrets — keep .env.prod OUT of git (only the .example is committed)
+.env.prod
+.env.prod.*
+!.env.prod.example
 
 # Logs
 *.log

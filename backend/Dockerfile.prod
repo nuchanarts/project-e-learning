@@ -1,0 +1,49 @@
+# Production image for the backend (Express + Prisma + MySQL).
+# Kept as a single full-deps image on purpose so the same image can:
+#   - run the API           -> node dist/app.js
+#   - push the schema        -> npx prisma db push   (prisma CLI is a devDependency)
+#   - seed the admin account -> npm run db:seed       (ts-node is needed)
+# Image size is not a concern for this internal app; robustness is.
+
+# ---------- build stage ----------
+FROM node:20-alpine AS build
+WORKDIR /app
+
+# Native deps: bcrypt needs python3/make/g++ to compile, prisma needs openssl.
+RUN apk add --no-cache python3 make g++ openssl
+
+# --legacy-peer-deps: typescript@6 conflicts with @typescript-eslint's peer range
+# (an eslint-only conflict that doesn't affect runtime). Matches how the project installs.
+COPY package.json package-lock.json* ./
+RUN npm ci --legacy-peer-deps
+
+COPY prisma ./prisma
+RUN npx prisma generate
+
+COPY tsconfig.json ./
+COPY src ./src
+# tsc --noCheck: emit JS without type-checking. The app is developed/run with
+# ts-node-dev --transpile-only (no type check), so a strict `tsc` surfaces pre-existing
+# type-only errors (e.g. Express 5 req.params typed string|string[]). --noCheck mirrors
+# the dev runtime exactly and keeps the production JS identical, with no app-code changes.
+RUN npx tsc --noCheck
+
+# ---------- runtime stage ----------
+FROM node:20-alpine AS runtime
+WORKDIR /app
+
+# openssl: prisma runtime engine. curl: container healthcheck.
+RUN apk add --no-cache openssl curl
+
+ENV NODE_ENV=production \
+    PORT=3001
+
+# Carry the fully-installed node_modules over (includes prisma CLI, ts-node,
+# the generated @prisma/client and the compiled bcrypt binary — all alpine-native).
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/prisma ./prisma
+COPY package.json ./
+
+EXPOSE 3001
+CMD ["node", "dist/app.js"]

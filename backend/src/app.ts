@@ -27,6 +27,11 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 
+// Liveness probe for container orchestration (docker healthcheck / Caddy gating).
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok' });
+});
+
 app.use('/auth', authRoutes);
 app.use('/courses', courseRoutes);
 app.use('/progress', progressRoutes);

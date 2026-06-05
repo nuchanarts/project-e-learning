@@ -1,0 +1,29 @@
+# Set DOMAIN in .env.prod (e.g. elearning.example.com)
+# Caddy will auto-issue a Let's Encrypt cert when DOMAIN is a public hostname
+# pointed at this server. If you set DOMAIN=:80 (or any :port form), Caddy
+# serves plain HTTP and skips TLS.
+
+{$DOMAIN} {
+    encode zstd gzip
+
+    # API -> backend. handle_path strips the /api prefix because the backend
+    # mounts its routes at root (/auth, /courses, /admin, ...).
+    handle_path /api/* {
+        reverse_proxy backend:3001 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # Everything else -> frontend SPA (nginx).
+    handle {
+        reverse_proxy frontend:80
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+}
