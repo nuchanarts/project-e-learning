@@ -115,7 +115,12 @@
       "Bash(GITHUB_PAGES=true npx vite build)",
       "WebFetch(domain:nuchanarts.github.io)",
       "Bash(Start-Sleep -Seconds 6)",
-      "Bash(Get-Content \"C:\\\\Users\\\\MS-10\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--01--Project-Hospital-BGS-Dev-Project-BGS-E-Learning\\\\de62b44e-89b1-4b5e-b133-d081efbe74eb\\\\tasks\\\\bpb4islvk.output\")"
+      "Bash(Get-Content \"C:\\\\Users\\\\MS-10\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--01--Project-Hospital-BGS-Dev-Project-BGS-E-Learning\\\\de62b44e-89b1-4b5e-b133-d081efbe74eb\\\\tasks\\\\bpb4islvk.output\")",
+      "PowerShell($ports = @\\(8000, 8001, 3000, 5000, 5173\\); foreach \\($p in $ports\\) { $r = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue; if \\($r\\) { \"$p : LISTENING \\(PID $\\($r[0].OwningProcess\\)\\)\" } else { \"$p : free\" } })",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5501 -State Listen -ErrorAction SilentlyContinue)",
+      "Bash(echo \"Started PID: $!\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue)",
+      "PowerShell(Start-Process -FilePath \"npm.cmd\" -ArgumentList \"run\",\"dev\" -WorkingDirectory \"d:\\\\01. Project Hospital\\\\BGS-Dev-Project\\\\BGS E-Learning\\\\frontend\" -RedirectStandardOutput \"d:\\\\01. Project Hospital\\\\BGS-Dev-Project\\\\BGS E-Learning\\\\frontend\\\\dev-out.log\" -RedirectStandardError \"d:\\\\01. Project Hospital\\\\BGS-Dev-Project\\\\BGS E-Learning\\\\frontend\\\\dev-err.log\" -WindowStyle Hidden -PassThru)"
     ]
   }
 }
