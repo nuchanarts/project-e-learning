@@ -1,7 +1,0 @@
-# LOCAL TEST override only (do NOT send to deployer).
-# Removes the MySQL host-port mapping so it won't clash with a MySQL already
-# running on the dev machine. The backend still reaches it via the internal
-# docker network (mysql:3306).
-services:
-  mysql:
-    ports: !reset []

@@ -19,3 +19,8 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Internal operator notes — keep local, not in repo
+DEPLOY.md
+RELEASE.md
+docker-compose.test.yml
