@@ -9,7 +9,14 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 
-# Browser calls https://<domain>/api/... ; Caddy strips /api and routes to backend.
+# VITE_API_URL is baked into the bundle at build time (Vite inlines import.meta.env.*).
+# Source of truth is THIS ARG's default (/api) — note .env.production is excluded by
+# .dockerignore (.env.*), so it is NOT read during the image build. Caddy strips the
+# /api prefix and routes to the backend.
+# ⚠️  Do NOT pass `--build-arg VITE_API_URL=/api` from Git Bash / MSYS on Windows: it
+#     path-mangles /api into "C:/Program Files/Git/api", baking a broken axios baseURL
+#     (a "c:" scheme) so the browser fires no request and login fails silently.
+#     Just rely on this default, or build via `docker compose -f docker-compose.prod.yml build`.
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=${VITE_API_URL}
 
