@@ -13,8 +13,13 @@
 - **backend เป็นคนเรียก BMS proxy** (ไม่ใช่ browser) → `app_id` / encryption key อยู่ฝั่ง server เท่านั้น
   (โปรเจคตัวอย่างเรียกจาก browser ทำให้ key โผล่ใน bundle)
 - จับคู่ user เก่าด้วย **`providerSub`** (subject จาก MOPH) — เป็น key ที่เสถียร
-- provider ส่ง name/hospcode/hospital/position มาครบ **แต่ไม่ส่ง email และ (ปกติ) ไม่ส่ง cid**
-  → user ใหม่ต้องมีหน้า **complete-profile** กรอก email (+cid) ก่อนสร้างบัญชี
+- จาก token จริง: claim ผู้ใช้ซ้อนอยู่ใน `client.*`
+  - **email** = `client.email` (plaintext) → auto-prefill ในฟอร์มได้
+  - **name/hospital/position** = จาก `provider_staff` (รองรับหลาย org) + `client.*`
+  - stable id = `client.provider_id` (ใช้เป็น `providerSub`; `sub` มี `@hospital_code` ต่อกัน เลยต่างกันต่อ รพ.)
+  - **cid** = มาแบบเข้ารหัส/แฮชเท่านั้น (`cid_aes` / `cid_hash` / `cid_encrypt`) — **ไม่มี 13 หลัก plaintext**
+    → ต้องให้ผู้ใช้กรอกเอง เว้นแต่ขอ AES key ถอด `cid_aes` จากทีม BMS
+  → user ใหม่ยังต้องมีหน้า **complete-profile** (email มักเติมให้แล้ว เหลือ cid ถ้าต้องการ)
 - ส่งข้อมูล provider ข้ามหน้าด้วย **registrationToken** (JWT อายุ 10 นาที, เซ็นด้วย `JWT_SECRET`)
   → client ถือได้แต่แก้ไม่ได้ (กันปลอม hcode/สังกัด)
 
