@@ -1,6 +1,10 @@
 import bcrypt from 'bcrypt';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { authRepository } from './auth.repository';
+import { bmsProvider } from './bmsProvider';
+
+const PROVIDER_LOGIN_MSG = 'บัญชีนี้เข้าสู่ระบบผ่าน MOPH กรุณาใช้ปุ่ม "เข้าสู่ระบบด้วย MOPH"';
+const MOPH_REG_TTL = '10m';
 
 const SALT_ROUNDS = 12;
 
@@ -85,6 +89,7 @@ export const authService = {
   async login(email: string, password: string) {
     const user = await authRepository.findByEmail(email);
     if (!user) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
+    if (!user.passwordHash) throw Object.assign(new Error(PROVIDER_LOGIN_MSG), { status: 400 });
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
@@ -101,6 +106,7 @@ export const authService = {
   async validateCredentials(email: string, password: string) {
     const user = await authRepository.findByEmail(email);
     if (!user) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
+    if (!user.passwordHash) throw Object.assign(new Error(PROVIDER_LOGIN_MSG), { status: 400 });
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
     if ((user as any).isActive === false)
@@ -166,5 +172,97 @@ export const authService = {
     } catch {
       throw Object.assign(new Error('Invalid refresh token'), { status: 401 });
     }
+  },
+
+  // Step 1 of MOPH login: exchange the OAuth code, then either log the user in
+  // (returning account matched by providerSub) or ask them to complete their profile.
+  async loginWithMophCode(code: string) {
+    const provider = await bmsProvider.exchangeCode(code);
+    const existing = await authRepository.findByProviderSub(provider.sub);
+
+    if (existing) {
+      if (existing.isActive === false)
+        throw Object.assign(new Error('บัญชีถูกระงับการใช้งาน'), { status: 403 });
+      const tokens = generateTokens(existing.id, existing.email, existing.role);
+      return { status: 'logged_in' as const, user: formatUser(existing), ...tokens };
+    }
+
+    // New account: hold the trusted provider data inside a short-lived signed token
+    // so the client can carry it to the complete-profile form without tampering.
+    const registrationToken = jwt.sign(
+      {
+        typ: 'moph_reg',
+        sub: provider.sub,
+        name: provider.name,
+        organizations: provider.organizations,
+        cid: provider.cid,
+        email: provider.email,
+      },
+      process.env.JWT_SECRET!,
+      { expiresIn: MOPH_REG_TTL } as SignOptions,
+    );
+
+    return {
+      status: 'need_profile' as const,
+      registrationToken,
+      prefill: {
+        name: provider.name,
+        organizations: provider.organizations,
+        cid: provider.cid ?? null,
+        email: provider.email ?? null,
+      },
+    };
+  },
+
+  // Step 2 of MOPH login (new accounts only): verify the registration token, merge
+  // the trusted provider data with the email/cid the user supplied, then create the row.
+  async completeMophRegistration(input: {
+    registrationToken: string;
+    email: string;
+    cid?: string;
+    hcode?: string;
+  }) {
+    let payload: any;
+    try {
+      payload = jwt.verify(input.registrationToken, process.env.JWT_SECRET!);
+    } catch {
+      throw Object.assign(new Error('เซสชันลงทะเบียนหมดอายุ กรุณาเข้าสู่ระบบ MOPH ใหม่'), {
+        status: 401,
+      });
+    }
+    if (payload.typ !== 'moph_reg')
+      throw Object.assign(new Error('โทเคนลงทะเบียนไม่ถูกต้อง'), { status: 401 });
+
+    const email = input.email?.trim();
+    if (!email) throw Object.assign(new Error('กรุณาระบุอีเมล'), { status: 400 });
+    if (await authRepository.findByEmail(email))
+      throw Object.assign(new Error('อีเมลนี้ถูกใช้งานแล้ว'), { status: 409 });
+
+    const cid = input.cid?.trim() || undefined;
+    if (cid) {
+      if (!/^\d{13}$/.test(cid))
+        throw Object.assign(new Error('เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก'), { status: 400 });
+      if (await authRepository.findByCid(cid))
+        throw Object.assign(new Error('เลขบัตรประชาชนนี้ถูกใช้งานแล้ว'), { status: 409 });
+    }
+
+    // Pick the org the user chose (multi-org staff), else the first one.
+    const orgs: any[] = payload.organizations ?? [];
+    const org = orgs.find((o) => o.hcode === input.hcode) ?? orgs[0];
+
+    const user = await authRepository.create({
+      email,
+      passwordHash: null,
+      name: payload.name,
+      cid: cid ?? null,
+      hospcode: org?.hcode ?? null,
+      hospital: org?.hname ?? null,
+      position: org?.position ?? null,
+      authProvider: 'moph',
+      providerSub: payload.sub,
+    });
+
+    const tokens = generateTokens(user.id, user.email, user.role);
+    return { user: formatUser(user), ...tokens };
   },
 };

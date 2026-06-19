@@ -8,6 +8,8 @@ router.post('/login', authController.login);
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 router.post('/login-by-cid', authController.loginByCid);
+router.post('/moph/callback', authController.mophCallback);
+router.post('/moph/complete', authController.mophComplete);
 router.post('/otp/verify', authController.verifyOtp);
 router.post('/otp/resend', authController.resendOtp);
 router.post('/refresh', authController.refresh);

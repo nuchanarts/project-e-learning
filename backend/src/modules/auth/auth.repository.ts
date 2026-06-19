@@ -7,14 +7,19 @@ export const authRepository = {
   async findByCid(cid: string) {
     return prisma.user.findUnique({ where: { cid } });
   },
+  async findByProviderSub(providerSub: string) {
+    return prisma.user.findUnique({ where: { providerSub } });
+  },
   async create(data: {
     email: string;
-    passwordHash: string;
+    passwordHash: string | null;
     name: string;
-    cid?: string;
-    hospital?: string;
-    hospcode?: string;
-    position?: string;
+    cid?: string | null;
+    hospital?: string | null;
+    hospcode?: string | null;
+    position?: string | null;
+    authProvider?: string;
+    providerSub?: string | null;
   }) {
     return prisma.user.create({ data });
   },
