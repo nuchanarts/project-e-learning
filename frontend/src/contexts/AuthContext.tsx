@@ -30,8 +30,19 @@ interface AuthContextType {
     position?: string;
     avatarUrl?: string | null;
   }) => Promise<void>;
+  mophCallback: (code: string) => Promise<MophCallbackResult>;
+  mophComplete: (input: {
+    registrationToken: string;
+    email: string;
+    cid?: string;
+    hcode?: string;
+  }) => Promise<void>;
   isLoading: boolean;
 }
+
+type MophCallbackResult =
+  | { status: 'logged_in'; user: User; accessToken: string; refreshToken: string }
+  | { status: 'need_profile'; registrationToken: string; prefill: unknown };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -46,6 +57,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
+  const applySession = (data: { accessToken: string; user: User }) => {
+    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    setUser(data.user);
+  };
+
   const login = async (email: string, password: string) => {
     if (email === 'admin' && password === 'admin') {
       const demo = { id: 'demo', email: 'admin@demo', name: 'Admin (Demo)', role: 'ADMIN' };
@@ -55,9 +72,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     const { data } = await api.post('/auth/login', { email, password });
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setUser(data.user);
+    applySession(data);
+  };
+
+  // MOPH step 1: exchange the OAuth code. Logs in on a returning account,
+  // otherwise returns need_profile so the caller can route to complete-profile.
+  const mophCallback = async (code: string): Promise<MophCallbackResult> => {
+    const { data } = await api.post('/auth/moph/callback', { code });
+    if (data.status === 'logged_in') applySession(data);
+    return data;
+  };
+
+  // MOPH step 2: finish a new account with the email/cid the user supplied.
+  const mophComplete = async (input: {
+    registrationToken: string;
+    email: string;
+    cid?: string;
+    hcode?: string;
+  }) => {
+    const { data } = await api.post('/auth/moph/complete', input);
+    applySession(data);
   };
 
   const register = async (
@@ -97,7 +131,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateProfile, isLoading }}>
+    <AuthContext.Provider
+      value={{ user, login, register, logout, updateProfile, mophCallback, mophComplete, isLoading }}
+    >
       {children}
     </AuthContext.Provider>
   );

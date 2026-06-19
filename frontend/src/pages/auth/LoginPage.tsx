@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage, LANGUAGES } from '../../contexts/LanguageContext';
 import api from '../../lib/api';
+import { buildMophAuthUrl, isMophConfigured, MOPH_ERROR_KEY } from '../../lib/moph';
 
 const REMEMBER_KEY = 'bgs_remember_email';
 
@@ -29,6 +30,19 @@ export default function LoginPage() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Surface an error left behind by a failed MOPH callback.
+  useEffect(() => {
+    const mophErr = sessionStorage.getItem(MOPH_ERROR_KEY);
+    if (mophErr) {
+      setError(mophErr);
+      sessionStorage.removeItem(MOPH_ERROR_KEY);
+    }
+  }, []);
+
+  const handleMophLogin = () => {
+    window.location.href = buildMophAuthUrl();
+  };
 
   const currentLang = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
 
@@ -466,6 +480,47 @@ export default function LoginPage() {
                   {t.login_register_link}
                 </Link>
               </p>
+            </>
+          )}
+
+          {isMophConfigured() && (
+            <>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  margin: '20px 0',
+                  color: 'var(--text-muted)',
+                  fontSize: 12,
+                }}
+              >
+                <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                หรือ
+                <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              </div>
+              <button
+                type="button"
+                onClick={handleMophLogin}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  padding: '11px 16px',
+                  borderRadius: 10,
+                  border: '1.5px solid var(--primary)',
+                  background: '#fff',
+                  color: 'var(--primary)',
+                  fontFamily: 'inherit',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                🏥 เข้าสู่ระบบด้วย MOPH
+              </button>
             </>
           )}
         </div>

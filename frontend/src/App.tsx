@@ -8,6 +8,8 @@ import { AppLayout } from './components/layout/AppLayout';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import MophCompleteProfilePage from './pages/auth/MophCompleteProfilePage';
+import { MophCallbackWatcher } from './components/auth/MophCallbackWatcher';
 import DashboardPage from './pages/DashboardPage';
 import CourseListPage from './pages/courses/CourseListPage';
 import CourseDetailPage from './pages/courses/CourseDetailPage';
@@ -34,10 +36,12 @@ export default function App() {
         <LanguageProvider>
           <AuthProvider>
             <CartProvider>
+              <MophCallbackWatcher />
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/auth/moph/complete" element={<MophCompleteProfilePage />} />
                 <Route
                   path="/dashboard"
                   element={
