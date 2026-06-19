@@ -15,7 +15,7 @@ function decodeJwtClaims(token: string): Record<string, any> {
   try {
     const part = token.split('.')[1];
     if (!part) return {};
-    return JSON.parse(Buffer.from(part, 'base64').toString('utf8'));
+    return JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
   } catch {
     return {};
   }
@@ -51,8 +51,13 @@ export const bmsProvider = {
       throw Object.assign(new Error('ข้อมูลจาก MOPH ไม่ครบ'), { status: 502 });
     }
 
+    // MOPH packs the user claims inside a nested `client` object.
     const claims = decodeJwtClaims(token);
-    const name = [staff.title_th, staff.firstname_th, staff.lastname_th].filter(Boolean).join(' ');
+    const client = claims.client ?? {};
+
+    const name =
+      [staff.title_th, staff.firstname_th, staff.lastname_th].filter(Boolean).join(' ') ||
+      String(client.name ?? '');
     const organizations = (staff.organization ?? []).map((o: any) => ({
       hcode: String(o.hcode ?? ''),
       hname: String(o.hname_th ?? ''),
@@ -60,17 +65,18 @@ export const bmsProvider = {
       positionId: String(o.position_id ?? ''),
     }));
 
-    // `sub` (provider subject) is the stable key for matching returning users.
-    const sub = String(claims.sub ?? json?.moph_token?.data?.sub ?? token);
-    const cid = claims.pid ?? claims.cid;
-    const email = claims.email;
+    // `provider_id` is the stable per-person key — `sub` embeds @hospital_code,
+    // which would differ per hospital for the same person.
+    const sub = String(client.provider_id ?? claims.sub ?? token);
+    // `email` is plaintext. The cid only arrives encrypted/hashed (cid_aes / cid_hash /
+    // cid_encrypt), so we cannot surface a usable 13-digit cid — the user supplies it.
+    const email = client.email ? String(client.email) : undefined;
 
     return {
       sub,
       name,
       organizations,
-      ...(cid ? { cid: String(cid) } : {}),
-      ...(email ? { email: String(email) } : {}),
+      ...(email ? { email } : {}),
     };
   },
 };
