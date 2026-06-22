@@ -101,6 +101,33 @@ export const authController = {
     }
   },
 
+  // MOPH Provider ID — step 1: exchange the OAuth code (login or ask to complete profile).
+  async mophCallback(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { code } = req.body;
+      const result = await authService.loginWithMophCode(code);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // MOPH Provider ID — step 2: complete a new account with the supplied email/cid.
+  async mophComplete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { registrationToken, email, cid, hcode } = req.body;
+      const result = await authService.completeMophRegistration({
+        registrationToken,
+        email,
+        cid,
+        hcode,
+      });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async forgotPassword(req: Request, res: Response, next: NextFunction) {
     try {
       const { email } = req.body;

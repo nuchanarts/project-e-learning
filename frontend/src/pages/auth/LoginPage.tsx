@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage, LANGUAGES } from '../../contexts/LanguageContext';
 import api from '../../lib/api';
+import { buildMophAuthUrl, isMophConfigured, MOPH_ERROR_KEY } from '../../lib/moph';
 
 const REMEMBER_KEY = 'bgs_remember_email';
 
@@ -29,6 +30,19 @@ export default function LoginPage() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Surface an error left behind by a failed MOPH callback.
+  useEffect(() => {
+    const mophErr = sessionStorage.getItem(MOPH_ERROR_KEY);
+    if (mophErr) {
+      setError(mophErr);
+      sessionStorage.removeItem(MOPH_ERROR_KEY);
+    }
+  }, []);
+
+  const handleMophLogin = () => {
+    window.location.href = buildMophAuthUrl();
+  };
 
   const currentLang = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
 
@@ -466,6 +480,72 @@ export default function LoginPage() {
                   {t.login_register_link}
                 </Link>
               </p>
+            </>
+          )}
+
+          {isMophConfigured() && (
+            <>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  margin: '20px 0',
+                  color: 'var(--text-muted)',
+                  fontSize: 12,
+                }}
+              >
+                <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                หรือ
+                <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              </div>
+              <button
+                type="button"
+                onClick={handleMophLogin}
+                aria-label="เข้าสู่ระบบด้วย MOPH Provider ID"
+                className="moph-shimmer-btn"
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: 56,
+                  borderRadius: 999,
+                  overflow: 'hidden',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 2,
+                  background: 'linear-gradient(135deg, #E7CA43, #12861B)',
+                }}
+              >
+                <span
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 12,
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: 999,
+                    background: '#fff',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <img src="/logos/moph-provider.png" alt="MOPH Provider ID" style={{ height: 32, width: 'auto' }} />
+                  <span className="moph-shimmer-overlay" style={{ position: 'absolute', inset: 0 }} />
+                </span>
+                <style>{`
+                  @keyframes mophShimmer {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                  }
+                  .moph-shimmer-btn { transition: opacity 0.15s; }
+                  .moph-shimmer-btn:hover { opacity: 0.9; }
+                  .moph-shimmer-overlay {
+                    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%);
+                    animation: mophShimmer 1540ms infinite;
+                  }
+                `}</style>
+              </button>
             </>
           )}
         </div>

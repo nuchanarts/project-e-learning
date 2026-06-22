@@ -1,0 +1,168 @@
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import { authService } from '../auth.service';
+import { authRepository } from '../auth.repository';
+import { bmsProvider } from '../bmsProvider';
+
+jest.mock('../auth.repository');
+jest.mock('../bmsProvider');
+
+const providerResult = {
+  sub: 'moph-sub-123',
+  name: 'นพ. สมชาย ใจดี',
+  organizations: [{ hcode: '12345', hname: 'รพ.สต.ทดสอบ', position: 'แพทย์', positionId: '0001' }],
+};
+const SUB_HASH = crypto.createHash('sha256').update('moph-sub-123').digest('hex');
+
+beforeEach(() => {
+  process.env.JWT_SECRET = 'test-secret';
+  jest.clearAllMocks();
+});
+
+describe('authService.loginWithMophCode', () => {
+  it('logs in an existing MOPH user matched by the hashed providerSub', async () => {
+    (bmsProvider.exchangeCode as jest.Mock).mockResolvedValue(providerResult);
+    (authRepository.findByProviderSubHash as jest.Mock).mockResolvedValue({
+      id: 'u1',
+      email: 'a@b.com',
+      name: 'X',
+      role: 'USER',
+      isActive: true,
+      passwordHash: 'random',
+      providerSubHash: SUB_HASH,
+      cid: null,
+      hospital: null,
+      position: null,
+      avatarUrl: null,
+    });
+
+    const result = await authService.loginWithMophCode('the-code');
+
+    expect(result.status).toBe('logged_in');
+    if (result.status !== 'logged_in') throw new Error('expected logged_in');
+    expect(result.accessToken).toBeDefined();
+    // never queried by the raw sub — only the sha256 hash
+    expect(authRepository.findByProviderSubHash).toHaveBeenCalledWith(SUB_HASH);
+  });
+
+  it('returns need_profile + a signed registrationToken for a new MOPH user', async () => {
+    (bmsProvider.exchangeCode as jest.Mock).mockResolvedValue(providerResult);
+    (authRepository.findByProviderSubHash as jest.Mock).mockResolvedValue(null);
+
+    const result = await authService.loginWithMophCode('the-code');
+
+    expect(result.status).toBe('need_profile');
+    if (result.status !== 'need_profile') throw new Error('expected need_profile');
+    expect(result.prefill.name).toBe('นพ. สมชาย ใจดี');
+    const decoded = jwt.verify(result.registrationToken, 'test-secret') as any;
+    expect(decoded.sub).toBe('moph-sub-123');
+    expect(decoded.typ).toBe('moph_reg');
+  });
+
+  it('rejects an inactive existing account', async () => {
+    (bmsProvider.exchangeCode as jest.Mock).mockResolvedValue(providerResult);
+    (authRepository.findByProviderSubHash as jest.Mock).mockResolvedValue({
+      id: 'u1',
+      email: 'a@b.com',
+      name: 'X',
+      role: 'USER',
+      isActive: false,
+      passwordHash: 'random',
+    });
+
+    await expect(authService.loginWithMophCode('the-code')).rejects.toMatchObject({ status: 403 });
+  });
+});
+
+describe('authService.completeMophRegistration', () => {
+  function makeRegToken(overrides: Record<string, unknown> = {}, expiresIn = '10m') {
+    return jwt.sign(
+      {
+        typ: 'moph_reg',
+        sub: 'moph-sub-123',
+        name: 'นพ. สมชาย ใจดี',
+        organizations: providerResult.organizations,
+        ...overrides,
+      },
+      'test-secret',
+      { expiresIn } as jwt.SignOptions,
+    );
+  }
+
+  it('creates a MOPH user with a random password hash + hashed providerSub', async () => {
+    (authRepository.findByEmail as jest.Mock).mockResolvedValue(null);
+    (authRepository.findByCid as jest.Mock).mockResolvedValue(null);
+    (authRepository.create as jest.Mock).mockImplementation(async (d: any) => ({
+      id: 'u2',
+      role: 'USER',
+      isActive: true,
+      avatarUrl: null,
+      ...d,
+    }));
+
+    const result = await authService.completeMophRegistration({
+      registrationToken: makeRegToken(),
+      email: 'staff@hospital.go.th',
+      cid: '1234567890123',
+      hcode: '12345',
+    });
+
+    expect(result.accessToken).toBeDefined();
+    const createArg = (authRepository.create as jest.Mock).mock.calls[0][0];
+    // random password hash stored (not null, not empty)
+    expect(typeof createArg.passwordHash).toBe('string');
+    expect(createArg.passwordHash.length).toBeGreaterThan(0);
+    // provider id stored only as a hash, never raw
+    expect(createArg.providerSubHash).toBe(SUB_HASH);
+    expect(createArg).not.toHaveProperty('providerSub');
+    expect(createArg).not.toHaveProperty('authProvider');
+    expect(createArg.hospcode).toBe('12345');
+    expect(createArg.hospital).toBe('รพ.สต.ทดสอบ');
+    expect(createArg.email).toBe('staff@hospital.go.th');
+  });
+
+  it('throws 409 if the chosen email already exists', async () => {
+    (authRepository.findByEmail as jest.Mock).mockResolvedValue({ id: 'x' });
+    await expect(
+      authService.completeMophRegistration({
+        registrationToken: makeRegToken(),
+        email: 'dupe@x.com',
+        hcode: '12345',
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('throws 409 if the chosen cid already exists', async () => {
+    (authRepository.findByEmail as jest.Mock).mockResolvedValue(null);
+    (authRepository.findByCid as jest.Mock).mockResolvedValue({ id: 'x' });
+    await expect(
+      authService.completeMophRegistration({
+        registrationToken: makeRegToken(),
+        email: 'new@x.com',
+        cid: '1234567890123',
+        hcode: '12345',
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('throws 401 for an invalid/expired registration token', async () => {
+    await expect(
+      authService.completeMophRegistration({
+        registrationToken: 'garbage.token.here',
+        email: 'a@b.com',
+        hcode: '12345',
+      }),
+    ).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('rejects a token that is not a moph_reg token', async () => {
+    const wrongToken = jwt.sign({ typ: 'access', sub: 'x' }, 'test-secret');
+    await expect(
+      authService.completeMophRegistration({
+        registrationToken: wrongToken,
+        email: 'a@b.com',
+        hcode: '12345',
+      }),
+    ).rejects.toMatchObject({ status: 401 });
+  });
+});
