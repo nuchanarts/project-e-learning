@@ -73,7 +73,11 @@ E) guard: /auth/login ถ้า user.passwordHash == null → 400 ("ใช้ป
 - `MOPH_BMS_AUTH_BASE_URL` — เช่น `https://bms-authen-provider.bmscloud.in.th/api/v1/auth`
 - `MOPH_BMS_APP_ID` — app UUID ของแอป e-learning
 - `MOPH_BMS_ENCRYPTION_KEY` — AES key 32 ตัวอักษร
-- `MOPH_REDIRECT_URI` — ต้องตรงกับที่ลงทะเบียนไว้กับ MOPH
+- `MOPH_REDIRECT_URI` — `https://e-learning.bmscloud.in.th` (origin เปล่า ไม่มี `/` ท้าย ไม่มี `#`)
+
+> ⚠️ **redirect_uri ต้องตรงกันแบบ byte-match ทั้ง 3 ที่:** (1) ที่ลงทะเบียนกับ MOPH/BMS
+> (2) ที่ frontend ใส่ใน authorize URL (`window.location.origin`) (3) backend `MOPH_REDIRECT_URI`
+> — MOPH เด้ง `?code` กลับมาที่ origin root แล้ว `MophCallbackWatcher` พาเข้า `#/dashboard` หรือ `#/auth/moph/complete` เอง
 
 **frontend** (public ได้):
 - `VITE_MOPH_URL` — เช่น `https://moph.id.th`

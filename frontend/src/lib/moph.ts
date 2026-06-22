@@ -31,10 +31,12 @@ export function buildMophAuthUrl(): string {
   const clientId = import.meta.env.VITE_MOPH_CLIENT_ID;
   const state = crypto.randomUUID();
   sessionStorage.setItem(STATE_KEY, state);
+  // Origin only, no trailing slash and no fragment — must byte-match the value
+  // registered with MOPH AND the backend's MOPH_REDIRECT_URI (e.g. https://e-learning.bmscloud.in.th).
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: clientId,
-    redirect_uri: `${window.location.origin}/`,
+    redirect_uri: window.location.origin,
     scope: 'ProviderID',
     state,
   });
