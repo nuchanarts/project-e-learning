@@ -22,8 +22,9 @@ export default function MophCompleteProfilePage() {
   }, []);
 
   const orgs = prefill?.organizations ?? [];
-  const [email, setEmail] = useState(prefill?.email ?? '');
-  const [cid, setCid] = useState(prefill?.cid ?? '');
+  // email + cid come verified from MOPH — display only, not user-editable.
+  const email = prefill?.email ?? '';
+  const cid = prefill?.cid ?? '';
   const [hcode, setHcode] = useState(orgs[0]?.hcode ?? '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -115,34 +116,13 @@ export default function MophCompleteProfilePage() {
             )}
 
             <div className="form-group">
-              <label className="form-label" htmlFor="moph-email">
-                อีเมล <span style={{ color: 'var(--danger, #DC2626)' }}>*</span>
-              </label>
-              <input
-                id="moph-email"
-                type="email"
-                className="form-input"
-                placeholder="example@hospital.go.th"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
+              <label className="form-label">อีเมล</label>
+              <input className="form-input" type="email" value={email} readOnly disabled />
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="moph-cid">
-                เลขบัตรประชาชน (ไม่บังคับ)
-              </label>
-              <input
-                id="moph-cid"
-                className="form-input"
-                placeholder="13 หลัก"
-                value={cid}
-                onChange={(e) => setCid(e.target.value.replace(/\D/g, '').slice(0, 13))}
-                inputMode="numeric"
-                maxLength={13}
-              />
+              <label className="form-label">เลขบัตรประชาชน</label>
+              <input className="form-input" value={cid} readOnly disabled />
             </div>
 
             <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: 4 }}>
