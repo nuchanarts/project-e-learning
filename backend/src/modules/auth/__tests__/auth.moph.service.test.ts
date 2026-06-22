@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { authService } from '../auth.service';
 import { authRepository } from '../auth.repository';
@@ -11,6 +12,7 @@ const providerResult = {
   name: 'นพ. สมชาย ใจดี',
   organizations: [{ hcode: '12345', hname: 'รพ.สต.ทดสอบ', position: 'แพทย์', positionId: '0001' }],
 };
+const SUB_HASH = crypto.createHash('sha256').update('moph-sub-123').digest('hex');
 
 beforeEach(() => {
   process.env.JWT_SECRET = 'test-secret';
@@ -18,15 +20,16 @@ beforeEach(() => {
 });
 
 describe('authService.loginWithMophCode', () => {
-  it('logs in an existing MOPH user matched by providerSub', async () => {
+  it('logs in an existing MOPH user matched by the hashed providerSub', async () => {
     (bmsProvider.exchangeCode as jest.Mock).mockResolvedValue(providerResult);
-    (authRepository.findByProviderSub as jest.Mock).mockResolvedValue({
+    (authRepository.findByProviderSubHash as jest.Mock).mockResolvedValue({
       id: 'u1',
       email: 'a@b.com',
       name: 'X',
       role: 'USER',
       isActive: true,
-      passwordHash: null,
+      passwordHash: 'random',
+      providerSubHash: SUB_HASH,
       cid: null,
       hospital: null,
       position: null,
@@ -38,12 +41,13 @@ describe('authService.loginWithMophCode', () => {
     expect(result.status).toBe('logged_in');
     if (result.status !== 'logged_in') throw new Error('expected logged_in');
     expect(result.accessToken).toBeDefined();
-    expect(authRepository.findByProviderSub).toHaveBeenCalledWith('moph-sub-123');
+    // never queried by the raw sub — only the sha256 hash
+    expect(authRepository.findByProviderSubHash).toHaveBeenCalledWith(SUB_HASH);
   });
 
   it('returns need_profile + a signed registrationToken for a new MOPH user', async () => {
     (bmsProvider.exchangeCode as jest.Mock).mockResolvedValue(providerResult);
-    (authRepository.findByProviderSub as jest.Mock).mockResolvedValue(null);
+    (authRepository.findByProviderSubHash as jest.Mock).mockResolvedValue(null);
 
     const result = await authService.loginWithMophCode('the-code');
 
@@ -57,13 +61,13 @@ describe('authService.loginWithMophCode', () => {
 
   it('rejects an inactive existing account', async () => {
     (bmsProvider.exchangeCode as jest.Mock).mockResolvedValue(providerResult);
-    (authRepository.findByProviderSub as jest.Mock).mockResolvedValue({
+    (authRepository.findByProviderSubHash as jest.Mock).mockResolvedValue({
       id: 'u1',
       email: 'a@b.com',
       name: 'X',
       role: 'USER',
       isActive: false,
-      passwordHash: null,
+      passwordHash: 'random',
     });
 
     await expect(authService.loginWithMophCode('the-code')).rejects.toMatchObject({ status: 403 });
@@ -85,7 +89,7 @@ describe('authService.completeMophRegistration', () => {
     );
   }
 
-  it('creates a MOPH user with no password and returns tokens', async () => {
+  it('creates a MOPH user with a random password hash + hashed providerSub', async () => {
     (authRepository.findByEmail as jest.Mock).mockResolvedValue(null);
     (authRepository.findByCid as jest.Mock).mockResolvedValue(null);
     (authRepository.create as jest.Mock).mockImplementation(async (d: any) => ({
@@ -105,9 +109,13 @@ describe('authService.completeMophRegistration', () => {
 
     expect(result.accessToken).toBeDefined();
     const createArg = (authRepository.create as jest.Mock).mock.calls[0][0];
-    expect(createArg.passwordHash).toBeNull();
-    expect(createArg.authProvider).toBe('moph');
-    expect(createArg.providerSub).toBe('moph-sub-123');
+    // random password hash stored (not null, not empty)
+    expect(typeof createArg.passwordHash).toBe('string');
+    expect(createArg.passwordHash.length).toBeGreaterThan(0);
+    // provider id stored only as a hash, never raw
+    expect(createArg.providerSubHash).toBe(SUB_HASH);
+    expect(createArg).not.toHaveProperty('providerSub');
+    expect(createArg).not.toHaveProperty('authProvider');
     expect(createArg.hospcode).toBe('12345');
     expect(createArg.hospital).toBe('รพ.สต.ทดสอบ');
     expect(createArg.email).toBe('staff@hospital.go.th');

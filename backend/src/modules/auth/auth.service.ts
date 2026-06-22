@@ -1,10 +1,14 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { authRepository } from './auth.repository';
 import { bmsProvider } from './bmsProvider';
 
 const PROVIDER_LOGIN_MSG = 'บัญชีนี้เข้าสู่ระบบผ่าน MOPH กรุณาใช้ปุ่ม "เข้าสู่ระบบด้วย MOPH"';
 const MOPH_REG_TTL = '10m';
+
+// Never store the raw MOPH provider id — match on a one-way hash instead.
+const hashProviderSub = (sub: string) => crypto.createHash('sha256').update(sub).digest('hex');
 
 const SALT_ROUNDS = 12;
 
@@ -89,7 +93,7 @@ export const authService = {
   async login(email: string, password: string) {
     const user = await authRepository.findByEmail(email);
     if (!user) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
-    if (!user.passwordHash) throw Object.assign(new Error(PROVIDER_LOGIN_MSG), { status: 400 });
+    if (user.providerSubHash) throw Object.assign(new Error(PROVIDER_LOGIN_MSG), { status: 400 });
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
@@ -106,7 +110,7 @@ export const authService = {
   async validateCredentials(email: string, password: string) {
     const user = await authRepository.findByEmail(email);
     if (!user) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
-    if (!user.passwordHash) throw Object.assign(new Error(PROVIDER_LOGIN_MSG), { status: 400 });
+    if (user.providerSubHash) throw Object.assign(new Error(PROVIDER_LOGIN_MSG), { status: 400 });
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw Object.assign(new Error('Invalid credentials'), { status: 401 });
     if ((user as any).isActive === false)
@@ -178,7 +182,7 @@ export const authService = {
   // (returning account matched by providerSub) or ask them to complete their profile.
   async loginWithMophCode(code: string) {
     const provider = await bmsProvider.exchangeCode(code);
-    const existing = await authRepository.findByProviderSub(provider.sub);
+    const existing = await authRepository.findByProviderSubHash(hashProviderSub(provider.sub));
 
     if (existing) {
       if (existing.isActive === false)
@@ -250,16 +254,18 @@ export const authService = {
     const orgs: any[] = payload.organizations ?? [];
     const org = orgs.find((o) => o.hcode === input.hcode) ?? orgs[0];
 
+    // MOPH accounts have no password — store a random unusable hash.
+    const passwordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), SALT_ROUNDS);
+
     const user = await authRepository.create({
       email,
-      passwordHash: null,
+      passwordHash,
       name: payload.name,
       cid: cid ?? null,
       hospcode: org?.hcode ?? null,
       hospital: org?.hname ?? null,
       position: org?.position ?? null,
-      authProvider: 'moph',
-      providerSub: payload.sub,
+      providerSubHash: hashProviderSub(payload.sub),
     });
 
     const tokens = generateTokens(user.id, user.email, user.role);

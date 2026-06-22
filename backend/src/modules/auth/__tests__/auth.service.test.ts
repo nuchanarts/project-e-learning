@@ -17,8 +17,7 @@ const mockUser = {
   hospital: 'รพ.สต.ทดสอบ',
   position: 'นักวิชาการสาธารณสุข',
   avatarUrl: null,
-  authProvider: 'local',
-  providerSub: null,
+  providerSubHash: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -87,8 +86,11 @@ describe('authService.login', () => {
       .rejects.toMatchObject({ status: 401 });
   });
 
-  it('should throw 400 when the account has no password (MOPH user)', async () => {
-    (authRepository.findByEmail as jest.Mock).mockResolvedValue({ ...mockUser, passwordHash: null });
+  it('should throw 400 for a MOPH account (providerSubHash set)', async () => {
+    (authRepository.findByEmail as jest.Mock).mockResolvedValue({
+      ...mockUser,
+      providerSubHash: 'abc123hash',
+    });
     await expect(authService.login('test@example.com', 'whatever'))
       .rejects.toMatchObject({ status: 400 });
   });
