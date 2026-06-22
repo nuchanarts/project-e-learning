@@ -51,13 +51,18 @@ export const bmsProvider = {
       throw Object.assign(new Error('ข้อมูลจาก MOPH ไม่ครบ'), { status: 502 });
     }
 
-    // MOPH packs the user claims inside a nested `client` object.
-    const claims = decodeJwtClaims(token);
-    const client = claims.client ?? {};
+    // The response carries two tokens with different shapes:
+    //  - outer `moph_token.access_token` → scopes_detail (plaintext cid via id_card)
+    //  - per-org `moph_access_token_idp`  → client (email + provider info)
+    const outer = decodeJwtClaims(token);
+    const org0: any = staff.organization?.[0];
+    const idpClient = (org0?.moph_access_token_idp ? decodeJwtClaims(org0.moph_access_token_idp) : {})
+      .client ?? {};
 
     const name =
+      String(staff.name_th ?? '') ||
       [staff.title_th, staff.firstname_th, staff.lastname_th].filter(Boolean).join(' ') ||
-      String(client.name ?? '');
+      String(idpClient.name ?? '');
     const organizations = (staff.organization ?? []).map((o: any) => ({
       hcode: String(o.hcode ?? ''),
       hname: String(o.hname_th ?? ''),
@@ -65,18 +70,20 @@ export const bmsProvider = {
       positionId: String(o.position_id ?? ''),
     }));
 
-    // `provider_id` is the stable per-person key — `sub` embeds @hospital_code,
-    // which would differ per hospital for the same person.
-    const sub = String(client.provider_id ?? claims.sub ?? token);
-    // `email` is plaintext. The cid only arrives encrypted/hashed (cid_aes / cid_hash /
-    // cid_encrypt), so we cannot surface a usable 13-digit cid — the user supplies it.
-    const email = client.email ? String(client.email) : undefined;
+    // `provider_id` is the stable per-person key.
+    const sub = String(staff.provider_id ?? idpClient.provider_id ?? outer.sub ?? token);
+    const email = idpClient.email ? String(idpClient.email) : undefined;
+    // Plaintext 13-digit cid is exposed under scopes_detail.id_card when the user
+    // consented to the id_card scope; otherwise we leave it for the user to fill.
+    const rawCid = outer?.scopes_detail?.id_card;
+    const cid = rawCid && /^\d{13}$/.test(String(rawCid)) ? String(rawCid) : undefined;
 
     return {
       sub,
       name,
       organizations,
       ...(email ? { email } : {}),
+      ...(cid ? { cid } : {}),
     };
   },
 };
