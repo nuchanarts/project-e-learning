@@ -51,11 +51,17 @@ E) guard: /auth/login ถ้า user.passwordHash == null → 400 ("ใช้ป
 
 ## การเปลี่ยน schema (`User`)
 
-- `passwordHash String?` — null = external auth (ไม่มี login รหัสผ่าน)
-- `authProvider String @default("local")` — 'local' | 'moph'
-- `providerSub String? @unique` — subject id จาก MOPH
+- `passwordHash` — **คงเดิม NOT NULL**; MOPH account เก็บ bcrypt ของรหัส**สุ่ม** (ไม่มีรหัสผ่านจริง)
+- `providerSubHash String? @unique @db.VarChar(64)` — **sha256 ของ MOPH provider id** (ไม่เก็บค่าดิบ)
+- match user เก่าด้วย `hashProviderSub(provider_id)`; guard กัน password login เมื่อ `providerSubHash != null`
 
-> ⚠️ ต้องรัน `prisma db push` (หรือ migrate) ขึ้น DB จริง — ผู้ดูแลรันเอง (โค้ดนี้ generate client แล้ว)
+> **Migration บน prod (additive ล้วน ไม่กระทบข้อมูลเดิม):**
+> ```sql
+> ALTER TABLE `User`
+>   ADD COLUMN `providerSubHash` VARCHAR(64) NULL,
+>   ADD UNIQUE INDEX `User_providerSubHash_key` (`providerSubHash`);
+> ```
+> (หรือ `prisma db push` — แต่ ALTER ตรง ๆ ปลอดภัยกว่าบน prod ที่ schema มาจาก SQL import)
 
 ## ไฟล์ backend
 
