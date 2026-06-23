@@ -20,6 +20,13 @@ RUN npm ci
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=${VITE_API_URL}
 
+# MOPH Provider ID login (public values — inlined into the bundle, same pattern as
+# VITE_API_URL). client_id + provider URL are not secrets; the secret lives server-side.
+ARG VITE_MOPH_URL=https://moph.id.th
+ARG VITE_MOPH_CLIENT_ID=9adaeaec-f199-44b2-8219-53346114fc7a
+ENV VITE_MOPH_URL=${VITE_MOPH_URL}
+ENV VITE_MOPH_CLIENT_ID=${VITE_MOPH_CLIENT_ID}
+
 COPY . .
 RUN npm run build
 
